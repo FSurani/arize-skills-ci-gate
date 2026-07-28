@@ -290,9 +290,9 @@ Independent · Negotiable · Valuable · Estimable · Small · Testable
         <thead><tr><th>Eval</th><th>Phase</th><th>What it checks</th><th>How</th><th>In Arize</th></tr></thead>
         <tbody>
           <tr><td><span class="e">Eval 0</span></td><td>1 · structural + security</td><td>Frontmatter, referenced files, no absolute paths; prompt-injection scan, embedded secrets, unsafe bundled scripts</td><td><span class="pill code">code</span></td><td><span style="font-family:var(--mono);font-size:.72rem;color:var(--muted)">in-gate (pre-experiment)</span></td></tr>
-          <tr><td><span class="e">Eval 1</span></td><td>2 · trigger</td><td>Did the skill load exactly when it should? False-positive / false-negative rates</td><td><span class="pill code">code</span></td><td><a class="evlink" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/evaluators/RXZhbHVhdG9yOjEyMDMyOmlQQzE=">cc-eval1-trigger</a></td></tr>
-          <tr><td><span class="e">Eval 2</span></td><td>3 · functional</td><td><b>Verifiable:</b> deterministic verifier vs a mock API. <b>Non-verifiable:</b> rubric LLM judge (good/bad + explanation)</td><td><span class="pill code">code</span> <span class="pill llm">or LLM</span></td><td><a class="evlink" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/evaluators/RXZhbHVhdG9yOjEyMDMzOmh5enY=">cc-eval2-verifier</a> · <a class="evlink" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/evaluators/RXZhbHVhdG9yOjEyMDM1OitLVFM=">cc-eval2-rubric</a></td></tr>
-          <tr><td><span class="e">Eval 4</span></td><td>efficiency</td><td>Tokens / turns per case against a budget — the tie-breaker</td><td><span class="pill code">code</span></td><td><a class="evlink" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/evaluators/RXZhbHVhdG9yOjEyMDM0OjlRVlE=">cc-eval4-efficiency</a></td></tr>
+          <tr><td><span class="e">Eval 1</span></td><td>2 · trigger</td><td>Did the skill load exactly when it should? False-positive / false-negative rates</td><td><span class="pill code">code</span></td><td><a class="evlink" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/evaluators/RXZhbHVhdG9yOjEyMDcxOnlMQUY=">trigger-accuracy</a></td></tr>
+          <tr><td><span class="e">Eval 2</span></td><td>3 · functional</td><td><b>Verifiable:</b> deterministic verifier vs a mock API. <b>Non-verifiable:</b> rubric LLM judge (good/bad + explanation)</td><td><span class="pill code">code</span> <span class="pill llm">or LLM</span></td><td><a class="evlink" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/evaluators/RXZhbHVhdG9yOjEyMDcyOkFKUTE=">output-correctness</a> · <a class="evlink" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/evaluators/RXZhbHVhdG9yOjEyMDc0Ond6UTg=">output-quality</a></td></tr>
+          <tr><td><span class="e">Eval 4</span></td><td>efficiency</td><td>Tokens / turns per case against a budget — the tie-breaker</td><td><span class="pill code">code</span></td><td><a class="evlink" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/evaluators/RXZhbHVhdG9yOjEyMDczOlliM2s=">token-efficiency</a></td></tr>
         </tbody>
       </table>
     </div>
@@ -441,7 +441,7 @@ tokens p50                   26680         9791
 <span class="k">VERDICT</span>                       <span class="bad">FAIL</span>         <span class="ok">PASS</span></pre>
     </div>
     <div class="linkrow">
-      <a class="axbtn" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/datasets/RGF0YXNldDozNTcyMjM6bWE4Sw==?selectedTab=experiments">Open api-helper experiments</a>
+      <a class="axbtn" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/datasets/RGF0YXNldDozNTcyNTg6QzIwRQ==?selectedTab=experiments">Open api-helper experiments</a>
     </div>
 
     <h3>Why the skill exists — trace, without vs with</h3>
@@ -466,12 +466,12 @@ tokens p50                   26680         9791
     </div>
 
     <h3>story-writer — judging the unverifiable</h3>
-    <p>No gold answer, so the <code class="inl">cc-eval2-rubric</code> evaluator (an LLM judge, run
+    <p>No gold answer, so the <code class="inl">output-quality</code> evaluator (an LLM judge, run
       server-side in Arize) scores each story <code class="inl">good</code>/<code class="inl">bad</code>
       against the INVEST rubric, <b>with a written explanation</b>. Same result shape as the code
       verifier, so the gate treats both identically.</p>
     <div class="linkrow">
-      <a class="axbtn" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/datasets/RGF0YXNldDozNTcwNjk6c3U1OQ==?selectedTab=experiments">Open story-writer experiment</a>
+      <a class="axbtn" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/datasets/RGF0YXNldDozNTcyNTk6TXdqSw==?selectedTab=experiments">Open story-writer experiment</a>
     </div>
     <p class="note">The A/B pass-rate deltas above use an engineered/illustrative variant so the tuning
       effect is reproducible; the traces and the story-writer scores are real Claude Code runs.</p>

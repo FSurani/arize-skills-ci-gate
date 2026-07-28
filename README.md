@@ -34,10 +34,10 @@ Each is an **Arize evaluator**, created once and run **server-side**:
 
 | Evaluator | Kind | What it decides |
 |---|---|---|
-| `cc-eval1-trigger` | code | Did the skill fire exactly when it should? (over-eager description = false positives) |
-| `cc-eval2-verifier` | code | Verifiable skills: correct answer + correct auth convention |
-| `cc-eval2-rubric` | LLM template | Non-verifiable skills: INVEST-style quality judged by an LLM (good/bad + explanation) |
-| `cc-eval4-efficiency` | code | Works-but-wasteful gotcha: token budget |
+| `trigger-accuracy` | code | Did the skill fire exactly when it should? (over-eager description = false positives) |
+| `output-correctness` | code | Verifiable skills: correct answer + correct auth convention |
+| `output-quality` | LLM template | Non-verifiable skills: INVEST-style quality judged by an LLM (good/bad + explanation) |
+| `token-efficiency` | code | Works-but-wasteful gotcha: token budget |
 
 Plus **Eval 0** (`gates/eval0_structural.py`) — the structural + prompt-injection/secret
 security scan that runs first, locally, and short-circuits the pipeline.

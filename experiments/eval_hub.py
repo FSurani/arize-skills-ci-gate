@@ -4,17 +4,17 @@
 This is the heart of the demo: the checks that decide whether a skill is good,
 expressed as **Arize evaluators** that Arize creates once and runs **server-side**.
 
-  • Eval 1  trigger    — did the skill fire exactly when it should? (over-eager = gotcha)
-  • Eval 2  verifier   — deterministic correctness for verifiable skills
-  • Eval 2  rubric      — LLM judge for non-verifiable skills (INVEST, etc.)
-  • Eval 4  efficiency  — token budget (works-but-wasteful = gotcha)
+  • trigger-accuracy    — did the skill fire exactly when it should? (over-eager = gotcha)
+  • output-correctness  — deterministic correctness for verifiable skills
+  • output-quality      — LLM judge for non-verifiable skills (INVEST, etc.)
+  • token-efficiency    — token budget (works-but-wasteful = gotcha)
 
 Adding a novel eval is ~10 lines: add an entry to EVALUATORS (a code string or an
 LLM template) + list it in SKILL_EVALS + map its columns in MAPPINGS.
 
 Public API used by setup.py (provisioning) and ci/gate.py (per-run):
   ensure_evaluators()                  -> {logical: evaluator_id}   (create in Arize, idempotent)
-  ensure_dataset(skill)                -> (name, dataset_id)        (one stable cc-<skill> dataset)
+  ensure_dataset(skill)                -> (name, dataset_id)        (one stable dataset per skill)
   run_experiment(skill, variant, runs) -> (dataset_id, experiment_id)  (push + score server-side)
   read_metrics(skill, ds_id, exp_id)   -> {fp_rate, fn_rate, functional_pass_rate, tokens_p50}
 
@@ -118,13 +118,13 @@ Respond with exactly one of these labels: good, bad"""
 
 # logical name -> spec
 EVALUATORS = {
-    "trigger":    {"name": "cc-eval1-trigger",    "kind": "code",     "col": "cc_eval1_trigger",
+    "trigger":    {"name": "trigger-accuracy",     "kind": "code",     "col": "trigger_accuracy",
                    "code": TRIGGER_CODE,    "variables": ["triggered", "should_trigger"]},
-    "verifier":   {"name": "cc-eval2-verifier",   "kind": "code",     "col": "cc_eval2_verifier",
+    "verifier":   {"name": "output-correctness",   "kind": "code",     "col": "output_correctness",
                    "code": VERIFIER_CODE,   "variables": ["answer", "expected", "api_log"]},
-    "efficiency": {"name": "cc-eval4-efficiency", "kind": "code",     "col": "cc_eval4_efficiency",
+    "efficiency": {"name": "token-efficiency",     "kind": "code",     "col": "token_efficiency",
                    "code": EFFICIENCY_CODE, "variables": ["tokens"]},
-    "rubric":     {"name": "cc-eval2-rubric",     "kind": "template", "col": "cc_eval2_rubric",
+    "rubric":     {"name": "output-quality",       "kind": "template", "col": "output_quality",
                    "template": RUBRIC_TEMPLATE, "choices": {"good": 1, "bad": 0}},
 }
 # which evaluators apply to each skill (verifiable -> verifier, non-verifiable -> rubric)
@@ -246,9 +246,9 @@ def ensure_evaluators():
 
 
 def ensure_dataset(skill, name=None):
-    """Reuse ONE stable cc-<skill> dataset (id persisted locally); create once if
+    """Reuse ONE stable dataset per skill (id persisted locally); create once if
     absent. Experiments (over time) are the version history, not new datasets."""
-    name = name or f"cc-{skill}"
+    name = name or skill
     cases = load_cases(DATASETS / f"{skill.replace('-', '_')}_cases.jsonl")
     st = _hub_state()
     ds_id = (st.get("datasets") or {}).get(name)
@@ -306,11 +306,11 @@ def _score_experiment(skill, variant, ds_id, exp_id, ev_ids, ts):
         qf = QUERY_FILTER.get(logical)
         t = None
         if qf:  # positives-only where applicable
-            t = axj("tasks", "create-evaluation", "-n", f"cc-{skill}-{variant}-{logical}-{ts}", "--task-type", ttype,
+            t = axj("tasks", "create-evaluation", "-n", f"{skill}-{variant}-{logical}-{ts}", "--task-type", ttype,
                     "--dataset", ds_id, "-s", SPACE, "--experiment-ids", exp_id,
                     "--evaluators", json.dumps([{**ev_cfg, "query_filter": qf}]), "-o", "json")
         if not t:
-            t = axj("tasks", "create-evaluation", "-n", f"cc-{skill}-{variant}-{logical}-{ts}-nf", "--task-type", ttype,
+            t = axj("tasks", "create-evaluation", "-n", f"{skill}-{variant}-{logical}-{ts}-nf", "--task-type", ttype,
                     "--dataset", ds_id, "-s", SPACE, "--experiment-ids", exp_id,
                     "--evaluators", json.dumps([ev_cfg]), "-o", "json")
         if not t:
@@ -334,11 +334,11 @@ def run_experiment(skill, variant, runs, ev_ids=None):
     for row in rows:
         row["example_id"] = cid_to_exid.get(row["case_id"], row["case_id"])
     ts = int(time.time())
-    exp = axj("experiments", "create", "-n", f"cc-{skill}-{variant}-{ts}", "--dataset", ds_id,
+    exp = axj("experiments", "create", "-n", f"{skill}-{variant}-{ts}", "--dataset", ds_id,
               "-s", SPACE, "-f", tmpfile(rows), "-o", "json")
     if not exp or not exp.get("id"):
         raise RuntimeError(f"experiment create failed for {skill}/{variant}")
-    print(f"[experiment] cc-{skill}-{variant}-{ts} -> {exp['id']} ({len(rows)} runs)")
+    print(f"[experiment] {skill}-{variant}-{ts} -> {exp['id']} ({len(rows)} runs)")
     _score_experiment(skill, variant, ds_id, exp["id"], ev_ids, ts)
     return ds_id, exp["id"]
 

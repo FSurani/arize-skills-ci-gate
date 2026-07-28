@@ -14,7 +14,7 @@ def test_every_skill_eval_is_defined_and_mapped():
             assert logical in hub.MAPPINGS, f"{logical} has no column mapping"
             spec = hub.EVALUATORS[logical]
             assert spec["kind"] in ("code", "template")
-            assert spec["name"].startswith("cc-")
+            assert spec["name"] and "eval" not in spec["name"].split("-")[0]  # descriptive, not "evalN"
             assert spec["col"]
 
 
