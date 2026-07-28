@@ -30,6 +30,8 @@ on:
         required: true
       ARIZE_SPACE_ID:
         required: true
+      ARIZE_AI_INTEGRATION_ID:
+        required: false   # needed to create the LLM rubric judge (first run only)
       ANTHROPIC_API_KEY:
         required: false
 
@@ -100,10 +102,19 @@ jobs:
           # non-interactive profile (mandatory before other ax commands)
           ax profiles create arize-ci --api-key "$ARIZE_API_KEY" --auth-method api-key || true
 
+      - name: Provision Arize (evaluators + datasets, idempotent)
+        env:
+          ARIZE_API_KEY: ${{ secrets.ARIZE_API_KEY }}
+          ARIZE_SPACE_ID: ${{ secrets.ARIZE_SPACE_ID }}
+          ARIZE_AI_INTEGRATION_ID: ${{ secrets.ARIZE_AI_INTEGRATION_ID }}
+          ARIZE_PROFILE: arize-ci
+        run: python experiments/setup.py
+
       - name: Run the skill gate
         env:
           ARIZE_API_KEY: ${{ secrets.ARIZE_API_KEY }}
           ARIZE_SPACE_ID: ${{ secrets.ARIZE_SPACE_ID }}
+          ARIZE_AI_INTEGRATION_ID: ${{ secrets.ARIZE_AI_INTEGRATION_ID }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ARIZE_PROFILE: arize-ci
         run: |
@@ -113,14 +124,6 @@ jobs:
             echo "::notice::running gate in mock mode (no ANTHROPIC_API_KEY or mock=true)"
           fi
           python ci/gate.py --skill "${{ matrix.skill }}" $MOCK_FLAG
-
-      - name: Upload gate report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gate-${{ matrix.skill }}
-          path: report/out/gate_${{ matrix.skill }}.json
-          if-no-files-found: ignore
 
 # ── Example caller (put in .github/workflows/pr.yml of the skills repo) ────────
 #

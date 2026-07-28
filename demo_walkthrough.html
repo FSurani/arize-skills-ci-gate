@@ -351,9 +351,17 @@ def evaluate_skill(skill_dir) -&gt; EvaluationResult:  <span class="code-cmt"># 
   <section id="ci">
     <div class="step-label">The CI gate</div>
     <h2>How to do it — the reusable workflow</h2>
-    <p>The whole gate is one <code class="inl">workflow_call</code> file plus a thresholds file. Drop
-      them into any agent repo; secrets are org-level. On a PR it detects changed skills, runs the
-      gate, and blocks on any breach — with Arize as the system of record.</p>
+    <p>Two steps: <b>provision Arize once</b> (create the evaluators + datasets in the Eval Hub),
+      then <b>gate on every change</b>. Both are tiny; drop them into any agent repo, secrets are
+      org-level, and Arize is the system of record.</p>
+
+    <details class="code"><summary>experiments/setup.py — provision Arize (run once)</summary>
+<pre>import eval_hub as hub
+
+evaluators = hub.ensure_evaluators()        <span class="code-cmt"># create the 4 evals in the Eval Hub (idempotent)</span>
+for skill in ("api-helper", "story-writer"):
+    hub.ensure_dataset(skill)               <span class="code-cmt"># one stable cc-&lt;skill&gt; dataset each</span></pre>
+    </details>
 
     <details class="code" open><summary>.github/workflows/skill-gate.yml — copy into any repo</summary>
 <pre>name: skill-gate
@@ -363,9 +371,10 @@ on:
       skill: { type: string, default: "" }   <span class="code-cmt"># empty = auto-detect changed skills</span>
       mock:  { type: boolean, default: false }
     secrets:
-      ARIZE_API_KEY:     { required: true }
-      ARIZE_SPACE_ID:    { required: true }
-      ANTHROPIC_API_KEY: { required: false } <span class="code-cmt"># absent → gate runs in --mock</span>
+      ARIZE_API_KEY:           { required: true }
+      ARIZE_SPACE_ID:          { required: true }
+      ARIZE_AI_INTEGRATION_ID: { required: false } <span class="code-cmt"># for the LLM rubric judge</span>
+      ANTHROPIC_API_KEY:       { required: false } <span class="code-cmt"># absent → gate runs in --mock</span>
 
 jobs:
   gate:
@@ -374,11 +383,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
-      - run: pip install -r requirements.txt   <span class="code-cmt"># incl. arize-ax-cli</span>
-      - name: AX CLI profile from secrets
-        run: ax profiles create arize-ci --api-key "$ARIZE_API_KEY" --auth-method api-key
-      - name: Run the skill gate
-        run: python ci/gate.py --skill "${{ matrix.skill }}"  <span class="code-cmt"># Arize = system of record</span></pre>
+      - run: pip install -r requirements.txt   <span class="code-cmt"># incl. arize-ax-cli 0.27</span>
+      - run: ax profiles create arize-ci --api-key "$ARIZE_API_KEY" --auth-method api-key
+      - run: python experiments/setup.py       <span class="code-cmt"># provision evaluators + datasets (idempotent)</span>
+      - run: python ci/gate.py --skill "${{ matrix.skill }}"  <span class="code-cmt"># eval0 → harness → Arize → call</span></pre>
     </details>
 
     <details class="code"><summary>ci/thresholds.yaml — per-skill gate thresholds</summary>
@@ -393,13 +401,14 @@ skills:
   story-writer: { functional_pass_rate_min: 0.80 }  <span class="code-cmt"># rubric judge, same bar</span></pre>
     </details>
     <div class="editrow">
-      <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/ci/skill-gate.yml">skill-gate.yml</a>
       <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/ci/gate.py">gate.py</a>
+      <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/experiments/eval_hub.py">eval_hub.py (the evals)</a>
+      <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/experiments/setup.py">setup.py</a>
+      <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/ci/skill-gate.yml">skill-gate.yml</a>
       <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/ci/thresholds.yaml">thresholds.yaml</a>
-      <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/experiments/eval_hub.py">eval_hub.py</a>
     </div>
-    <p class="note">Full source (harness, evaluators, <code class="inl">gate.py</code>, the 135-line
-      workflow with changed-skill detection + tracing-plugin install) lives in the demo repo
+    <p class="note">The richness lives in <code class="inl">eval_hub.py</code> (the evaluators);
+      the pipeline in <code class="inl">gate.py</code> is ~5 steps. Full source in
       <code class="inl">FSurani/arize-skills-ci-gate</code>. Links above open each file on GitHub.</p>
 
     <h3>Related: the same pattern, another example</h3>
