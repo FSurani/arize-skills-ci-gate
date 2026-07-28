@@ -383,8 +383,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
-      - run: pip install -r requirements.txt   <span class="code-cmt"># incl. arize-ax-cli 0.27</span>
-      - run: ax profiles create arize-ci --api-key "$ARIZE_API_KEY" --auth-method api-key
+      - run: pip install -r requirements.txt   <span class="code-cmt"># incl. the Arize Python SDK</span>
       - run: python experiments/setup.py       <span class="code-cmt"># provision evaluators + datasets (idempotent)</span>
       - run: python ci/gate.py --skill "${{ matrix.skill }}"  <span class="code-cmt"># eval0 → harness → Arize → call</span></pre>
     </details>

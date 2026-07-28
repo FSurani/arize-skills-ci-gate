@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Arize Eval Hub — the evaluators and the Arize plumbing for skill gating.
 
-This is the heart of the demo: the checks that decide whether a skill is good,
-expressed as **Arize evaluators** that Arize creates once and runs **server-side**.
+The checks that decide whether a skill is good, expressed as **Arize evaluators**
+that Arize creates once and runs **server-side** (the Eval Hub). Driven entirely
+through the **Arize Python SDK** (`arize.ArizeClient`) — no CLI, no subprocess.
 
   • trigger-accuracy    — did the skill fire exactly when it should? (over-eager = gotcha)
   • output-correctness  — deterministic correctness for verifiable skills
@@ -25,33 +26,38 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
-import tempfile
+import sys
 import time
 from pathlib import Path
 
-import requests
+from arize import ArizeClient
+from arize.experiments.types import ExperimentTaskFieldNames
+from arize.tasks.types import TaskType, TaskEvaluatorInput
+from arize.evaluators.types import CustomCodeConfig, TemplateConfig, EvaluatorLlmConfig
+from arize._generated.api_client.models.invocation_params import InvocationParams
+from arize._generated.api_client.models.provider_params import ProviderParams
 
 REPO = Path(__file__).resolve().parents[1]
 DATASETS = REPO / "datasets"
-import sys
 for p in (REPO / "gates", REPO / "harness"):
     sys.path.insert(0, str(p))
 from common import load_cases, detect_triggered              # noqa: E402
 
 # ── Arize connection ─────────────────────────────────────────────────────────
-SPACE = os.environ.get("ARIZE_SPACE_ID", "")       # base64 space GID
-SA_ANTHROPIC = os.environ.get("ARIZE_AI_INTEGRATION_ID", "")  # provider creds for the LLM judge
-MODEL = os.environ.get("JUDGE_MODEL", "claude-sonnet-4-6")
-API = "https://api.arize.com/v2"
+SPACE = os.environ.get("ARIZE_SPACE_ID", "")                  # base64 space GID
 KEY = os.environ.get("ARIZE_API_KEY", "")
-H = {"Authorization": f"Bearer {KEY}"}
-HUB_STATE = REPO / "report" / "out" / "hub_state.json"   # persists the stable dataset id
+AI_INTEGRATION = os.environ.get("ARIZE_AI_INTEGRATION_ID", "")  # provider creds for the LLM judge
+MODEL = os.environ.get("JUDGE_MODEL", "claude-sonnet-4-6")
+HUB_STATE = REPO / "report" / "out" / "hub_state.json"        # persists the stable dataset id
+
+_CLIENT = None
 
 
-def P(col: str) -> str:
-    # experiment-run columns are addressed by their bare top-level name
-    return col
+def client() -> ArizeClient:
+    global _CLIENT
+    if _CLIENT is None:
+        _CLIENT = ArizeClient(api_key=KEY)
+    return _CLIENT
 
 
 CODE_IMPORTS = ("from typing import Any, Optional\n"
@@ -62,7 +68,7 @@ CODE_IMPORTS = ("from typing import Any, Optional\n"
 # Code evaluators run server-side in Arize's sandbox, so each is a self-contained
 # code string (Arize's validator wants a single `return EvaluationResult(...)`).
 TRIGGER_CODE = '''class CcTrigger(CodeEvaluator):
-    """Eval 1: did the skill fire exactly when it should have?"""
+    """Did the skill fire exactly when it should have?"""
     def evaluate(self, *, triggered=None, should_trigger=None, **kw) -> EvaluationResult:
         t = str(triggered).strip().lower() in ("true", "1", "yes")
         s = str(should_trigger).strip().lower() in ("true", "1", "yes")
@@ -76,8 +82,8 @@ TRIGGER_CODE = '''class CcTrigger(CodeEvaluator):
 '''
 
 VERIFIER_CODE = '''class CcVerifier(CodeEvaluator):
-    """Eval 2 (verifier): correct answer AND correct auth convention (X-Org-Token).
-    Negatives (no expected) self-guard to not_applicable instead of a false fail."""
+    """Correct answer AND correct auth convention (X-Org-Token). Negatives (no
+    expected) self-guard to not_applicable instead of a false fail."""
     def evaluate(self, *, answer=None, expected=None, api_log=None, **kw) -> EvaluationResult:
         a = ("" if answer is None else str(answer)).strip()
         e = ("" if expected is None else str(expected)).strip()
@@ -96,7 +102,7 @@ VERIFIER_CODE = '''class CcVerifier(CodeEvaluator):
 '''
 
 EFFICIENCY_CODE = '''class CcEfficiency(CodeEvaluator):
-    """Eval 4: token budget check."""
+    """Token budget check."""
     def evaluate(self, *, tokens=None, **kw) -> EvaluationResult:
         try: n = int(float(tokens))
         except Exception: n = 0
@@ -132,12 +138,12 @@ SKILL_EVALS = {
     "api-helper":   ["trigger", "verifier", "efficiency"],
     "story-writer": ["trigger", "rubric", "efficiency"],
 }
-# column mappings per evaluator (output is top-level; the rest are extra columns)
+# column mappings per evaluator (output is a top-level task field; the rest are extra columns)
 MAPPINGS = {
-    "trigger":    lambda: {"triggered": P("triggered"), "should_trigger": P("should_trigger")},
-    "verifier":   lambda: {"answer": P("answer"), "expected": P("expected"), "api_log": P("api_log")},
-    "efficiency": lambda: {"tokens": P("tokens")},
-    "rubric":     lambda: {"output": "output", "rubric": P("rubric")},
+    "trigger":    lambda: {"triggered": "triggered", "should_trigger": "should_trigger"},
+    "verifier":   lambda: {"answer": "answer", "expected": "expected", "api_log": "api_log"},
+    "efficiency": lambda: {"tokens": "tokens"},
+    "rubric":     lambda: {"output": "output", "rubric": "rubric"},
 }
 # functional evaluators score positives only (negatives have no functional task)
 QUERY_FILTER = {"verifier": "should_trigger = 'true'", "rubric": "should_trigger = 'true'"}
@@ -152,25 +158,6 @@ _ANSWERS = {
 }
 
 
-# ── ax CLI + raw-API helpers ─────────────────────────────────────────────────
-def ax(*a):
-    return subprocess.run(["ax", *a], capture_output=True, text=True, timeout=300)
-
-
-def axj(*a):
-    s = ax(*a).stdout or ""
-    i = min([x for x in (s.find("{"), s.find("[")) if x >= 0], default=-1)
-    return json.loads(s[i:]) if i >= 0 else None
-
-
-def tmpfile(rows):
-    f = tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False)
-    for r in rows:
-        f.write(json.dumps(r) + "\n")
-    f.close()
-    return f.name
-
-
 def _hub_state():
     try:
         return json.loads(HUB_STATE.read_text()) if HUB_STATE.exists() else {}
@@ -183,38 +170,11 @@ def _save_hub_state(s):
     HUB_STATE.write_text(json.dumps(s, indent=2))
 
 
-def list_evaluators():
-    # `evaluators list` caps -l at 100 (422 above that); paginate by cursor.
-    out, cursor = {}, None
-    for _ in range(20):
-        args = ["evaluators", "list", "--space", SPACE, "-l", "100", "-o", "json"]
-        if cursor:
-            args += ["-c", cursor]
-        d = axj(*args) or {}
-        for e in d.get("evaluators", []):
-            out[e["name"]] = e["id"]
-        cursor = (d.get("pagination") or {}).get("next_cursor")
-        if not cursor:
-            break
-    return out
-
-
-def poll_run(task_id, timeout=240):
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        r = requests.get(f"{API}/tasks/{task_id}/runs", headers=H, timeout=30)
-        runs = r.json().get("task_runs", []) if r.status_code == 200 else []
-        if runs and runs[0].get("status") in ("COMPLETED", "FAILED", "CANCELLED"):
-            return runs[0].get("status")
-        time.sleep(5)
-    return "TIMEOUT"
-
-
 # ── provisioning: evaluators + dataset (setup.py) ────────────────────────────
 def ensure_evaluators():
-    """Create the cc- evaluators in Arize if absent; return {logical: id}.
-    Idempotent, and robust to a flaky `evaluators list`."""
-    existing = list_evaluators()
+    """Create the evaluators in Arize if absent; return {logical: id}. Idempotent."""
+    c = client()
+    existing = {e.name: e.id for e in c.evaluators.list(space=SPACE, limit=100).evaluators}
     out = {}
     for logical, spec in EVALUATORS.items():
         if spec["name"] in existing:
@@ -222,26 +182,23 @@ def ensure_evaluators():
             print(f"[evaluator] reuse {spec['name']} -> {out[logical]}")
             continue
         if spec["kind"] == "code":
-            ev = axj("evaluators", "create-code-evaluator", "-n", spec["name"], "-s", SPACE,
-                     "--commit-message", "v1", "--code-type", "custom", "--code-name", spec["col"],
-                     "--code", spec["code"], "--imports", CODE_IMPORTS,
-                     "--variables", json.dumps(spec["variables"]), "-o", "json")
+            ev = c.evaluators.create_code_evaluator(
+                name=spec["name"], space=SPACE, commit_message="v1",
+                code_config=CustomCodeConfig(type="custom", name=spec["col"], code=spec["code"],
+                                             imports=CODE_IMPORTS, variables=spec["variables"]))
         else:
-            ev = axj("evaluators", "create-template-evaluator", "-n", spec["name"], "-s", SPACE,
-                     "--commit-message", "v1", "--template-name", spec["col"],
-                     "--ai-integration-id", SA_ANTHROPIC, "--model-name", MODEL,
-                     "--classification-choices", json.dumps(spec["choices"]),
-                     "--include-explanations", "--invocation-params", '{"temperature": 0}',
-                     "--template", spec["template"], "-o", "json")
-        if ev and ev.get("id"):
-            out[logical] = ev["id"]
-            print(f"[evaluator] created {spec['name']} -> {ev['id']}")
-        else:
-            found = list_evaluators().get(spec["name"])
-            if not found:
-                raise RuntimeError(f"could not create or find evaluator {spec['name']}")
-            out[logical] = found
-            print(f"[evaluator] found existing {spec['name']} -> {found}")
+            ev = c.evaluators.create_template_evaluator(
+                name=spec["name"], space=SPACE, commit_message="v1",
+                template_config=TemplateConfig(
+                    name=spec["col"], template=spec["template"],
+                    include_explanations=True, use_function_calling_if_available=False,
+                    classification_choices=spec["choices"],
+                    llm_config=EvaluatorLlmConfig(
+                        ai_integration_id=AI_INTEGRATION, model_name=MODEL,
+                        invocation_parameters=InvocationParams(temperature=0),
+                        provider_parameters=ProviderParams())))
+        out[logical] = ev.id
+        print(f"[evaluator] created {spec['name']} -> {ev.id}")
     return out
 
 
@@ -253,13 +210,16 @@ def ensure_dataset(skill, name=None):
     st = _hub_state()
     ds_id = (st.get("datasets") or {}).get(name)
     if ds_id:
-        chk = ax("datasets", "export", ds_id, "--stdout")
-        if chk.returncode == 0 and (chk.stdout or "").strip().startswith("["):
+        try:
+            client().datasets.get(dataset=ds_id, space=SPACE)
             print(f"[dataset] reuse {name} -> {ds_id}")
             return name, ds_id
-    ds = axj("datasets", "create", "-n", name, "-s", SPACE,
-             "-f", tmpfile([{"case_id": c["id"], "prompt": c["prompt"]} for c in cases]), "-o", "json")
-    ds_id = ds["id"]
+        except Exception:
+            pass
+    ds = client().datasets.create(
+        name=name, space=SPACE,
+        examples=[{"case_id": c["id"], "prompt": c["prompt"]} for c in cases])
+    ds_id = ds.id
     st.setdefault("datasets", {})[name] = ds_id
     _save_hub_state(st)
     print(f"[dataset] created {name} -> {ds_id} ({len(cases)} examples)")
@@ -274,7 +234,6 @@ def build_rows(skill, variant, runs, cases_by_id):
     for r in runs:
         c = cases_by_id.get(r.case_id, {})
         row = {
-            "example_id": None,  # filled after dataset export
             "case_id": r.case_id, "variant": variant,
             "output": r.final_output or "",
             "triggered": bool(detect_triggered(r.tool_spans, skill)),
@@ -297,56 +256,44 @@ def build_rows(skill, variant, runs, cases_by_id):
     return rows
 
 
-def _score_experiment(skill, variant, ds_id, exp_id, ev_ids, ts):
-    """Create + trigger one Arize eval task per applicable evaluator; wait for each."""
-    for logical in SKILL_EVALS[skill]:
-        spec = EVALUATORS[logical]
-        ttype = "CODE_EVALUATION" if spec["kind"] == "code" else "TEMPLATE_EVALUATION"
-        ev_cfg = {"evaluator_id": ev_ids[logical], "column_mappings": MAPPINGS[logical]()}
-        qf = QUERY_FILTER.get(logical)
-        t = None
-        if qf:  # positives-only where applicable
-            t = axj("tasks", "create-evaluation", "-n", f"{skill}-{variant}-{logical}-{ts}", "--task-type", ttype,
-                    "--dataset", ds_id, "-s", SPACE, "--experiment-ids", exp_id,
-                    "--evaluators", json.dumps([{**ev_cfg, "query_filter": qf}]), "-o", "json")
-        if not t:
-            t = axj("tasks", "create-evaluation", "-n", f"{skill}-{variant}-{logical}-{ts}-nf", "--task-type", ttype,
-                    "--dataset", ds_id, "-s", SPACE, "--experiment-ids", exp_id,
-                    "--evaluators", json.dumps([ev_cfg]), "-o", "json")
-        if not t:
-            print(f"[score] task create FAILED for {logical}")
-            continue
-        ax("tasks", "trigger-run", t["id"], "--experiment-ids", exp_id)
-        print(f"[score] {spec['name']}: {poll_run(t['id'])}")
-
-
 def run_experiment(skill, variant, runs, ev_ids=None):
     """Push harness runs as an Arize experiment against the stable dataset, then
     let the Eval Hub evaluators score it server-side. Returns (dataset_id, experiment_id)."""
+    c = client()
     cases = load_cases(DATASETS / f"{skill.replace('-', '_')}_cases.jsonl")
-    cases_by_id = {c["id"]: c for c in cases}
+    cases_by_id = {x["id"]: x for x in cases}
     _, ds_id = ensure_dataset(skill)
-    ex = json.loads(ax("datasets", "export", ds_id, "--stdout").stdout or "[]")
-    cid_to_exid = {(row.get("additional_properties") or {}).get("case_id"): row["id"] for row in ex}
+    cid_to_exid = {ex.additional_properties["case_id"]: ex.id
+                   for ex in c.datasets.list_examples(dataset=ds_id, space=SPACE, all=True).examples}
     ev_ids = ev_ids or ensure_evaluators()
 
     rows = build_rows(skill, variant, runs, cases_by_id)
     for row in rows:
         row["example_id"] = cid_to_exid.get(row["case_id"], row["case_id"])
     ts = int(time.time())
-    exp = axj("experiments", "create", "-n", f"{skill}-{variant}-{ts}", "--dataset", ds_id,
-              "-s", SPACE, "-f", tmpfile(rows), "-o", "json")
-    if not exp or not exp.get("id"):
-        raise RuntimeError(f"experiment create failed for {skill}/{variant}")
-    print(f"[experiment] {skill}-{variant}-{ts} -> {exp['id']} ({len(rows)} runs)")
-    _score_experiment(skill, variant, ds_id, exp["id"], ev_ids, ts)
-    return ds_id, exp["id"]
+    exp = c.experiments.create(
+        name=f"{skill}-{variant}-{ts}", dataset=ds_id, space=SPACE, experiment_runs=rows,
+        task_fields=ExperimentTaskFieldNames(example_id="example_id", output="output"))
+    print(f"[experiment] {skill}-{variant}-{ts} -> {exp.id} ({len(rows)} runs)")
+
+    for logical in SKILL_EVALS[skill]:
+        spec = EVALUATORS[logical]
+        ttype = TaskType.CODE_EVALUATION if spec["kind"] == "code" else TaskType.TEMPLATE_EVALUATION
+        te = TaskEvaluatorInput(evaluator_id=ev_ids[logical], column_mappings=MAPPINGS[logical](),
+                                query_filter=QUERY_FILTER.get(logical))
+        task = c.tasks.create_evaluation_task(
+            name=f"{skill}-{variant}-{logical}-{ts}", task_type=ttype, evaluators=[te],
+            dataset=ds_id, space=SPACE, experiment_ids=[exp.id])
+        run = c.tasks.trigger_run(task=task.id, experiment_ids=[exp.id])
+        status = c.tasks.wait_for_run(run_id=run.id, timeout=300)
+        print(f"[score] {spec['name']}: {getattr(status, 'status', status)}")
+    return ds_id, exp.id
 
 
 def read_metrics(skill, ds_id, exp_id):
     """Read the hub eval scores back from Arize and reduce to gate metrics.
     Functional pass-rate counts POSITIVES only (negatives have no functional task)."""
-    rows = json.loads(ax("experiments", "export", exp_id, "--dataset", ds_id, "-s", SPACE, "--stdout").stdout or "[]")
+    runs = client().experiments.list_runs(experiment=exp_id, dataset=ds_id, space=SPACE, all=True).experiment_runs
     trig_col = EVALUATORS["trigger"]["col"]
     func_col = next((EVALUATORS[l]["col"] for l in SKILL_EVALS[skill] if l in ("verifier", "rubric")), None)
 
@@ -355,8 +302,8 @@ def read_metrics(skill, ds_id, exp_id):
 
     pos = neg = fp = fn = fpass = ffail = 0
     toks = []
-    for r in rows:
-        ap = r.get("additional_properties") or {}
+    for r in runs:
+        ap = r.additional_properties or {}
         st = _b(ap.get("should_trigger"))
         tl = ap.get(f"eval.{trig_col}.label")
         if st:
@@ -372,8 +319,11 @@ def read_metrics(skill, ds_id, exp_id):
             neg += 1
             fp += (tl == "false_positive")
         t = ap.get("tokens")
-        if isinstance(t, (int, float)) and t >= 0:
-            toks.append(t)
+        try:
+            if float(t) >= 0:
+                toks.append(float(t))
+        except (TypeError, ValueError):
+            pass
     toks.sort()
     fapp = fpass + ffail
     return {

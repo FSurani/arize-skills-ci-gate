@@ -1,6 +1,6 @@
 # ── Arize AX ───────────────────────────────────────────────────────────────
 arize>=8.32.0            # AX Python SDK (experiments, datasets)
-arize-ax-cli>=0.25.0     # `ax` CLI — the CI-facing surface the customer asked for
+# arize-ax-cli>=0.27.0   # optional: the `ax` CLI, for ad-hoc shell ops. The demo drives Arize via the SDK above.
 arize-otel>=0.13.0       # OTLP exporter config helper for AX
 
 # ── Tracing (OpenInference → AX) ─────────────────────────────────────────────

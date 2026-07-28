@@ -31,7 +31,7 @@ for p in (REPO / "gates", REPO / "harness", REPO / "experiments"):
 from common import load_cases                        # LOCAL: dataset loader
 import eval0_structural as eval0                      # LOCAL: Eval 0 (structural + security)
 from run_case import run_matrix_async, DEFAULT_WORK_ROOT  # LOCAL: the sandboxed skill harness
-import eval_hub                                       # ARIZE: Eval Hub (evaluators + experiments) via the ax CLI
+import eval_hub                                       # ARIZE: Eval Hub (evaluators + experiments) via the Arize SDK
 
 SKILLS = REPO / "skills"
 # the candidate variant to gate when --variant isn't given

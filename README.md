@@ -66,14 +66,14 @@ over the trace is a natural next one.)*
 ## Prerequisites
 
 - **Python 3.11+**
-- **Arize AX CLI `ax` — v0.27** (`pip install arize-ax-cli`) + an Arize account (API key + space id).
+- **Arize Python SDK** (`pip install "arize>=8.32"`) + an Arize account (API key + space id). The demo drives Arize entirely through the SDK — the `ax` CLI is optional.
 - **Anthropic API key** — only for real runs + the LLM judge. Omit to stay in offline `--mock`.
 - **(Real runs only)** Claude Code + the Arize coding-harness-tracing plugin.
 
 ## Setup
 
 ```bash
-# 1. venv + deps (Arize SDK + ax CLI 0.27 + Claude Agent SDK + tests)
+# 1. venv + deps (Arize SDK + Claude Agent SDK + tests)
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 
@@ -130,14 +130,20 @@ and `ANTHROPIC_API_KEY` as repo/org secrets. Without `ANTHROPIC_API_KEY` it runs
 - **Mock harness** (`--mock`) reproduces the engineered results deterministically with no
   tokens, and still writes a real mock-API request log so the verifier is genuinely exercised.
 
-### AX CLI 0.27 notes (handled in `experiments/eval_hub.py`)
+### How `eval_hub.py` talks to Arize (Python SDK)
 
-- Pass the **base64 space GID** with `-s`; address datasets/experiments **by id**.
-- Dataset rows may not use a column named `id` → carry it as `case_id`.
-- Experiment run files need a **consistent, non-null column schema** (nulls → 400).
-- Export experiments **by id** (`--stdout`, no `--output json`). `evaluators list` caps
-  `-l` at 100 (paginate by cursor). Code evaluators run server-side, so each is a
-  self-contained code string with a single `return EvaluationResult(...)`.
+One `arize.ArizeClient(api_key=…)` drives everything — no CLI, no subprocess:
+
+- `client.evaluators.create_code_evaluator` / `create_template_evaluator` — the Eval Hub.
+- `client.datasets.create` / `list_examples` — one stable dataset per skill.
+- `client.experiments.create(experiment_runs, task_fields=…)` — push the harness runs.
+- `client.tasks.create_evaluation_task` + `trigger_run` + `wait_for_run` — score server-side.
+- `client.experiments.list_runs(...).experiment_runs` — read the scores back
+  (`run.additional_properties["eval.<name>.label"]`).
+
+Notes: code evaluators run in Arize's sandbox, so each is a self-contained code string with a
+single `return EvaluationResult(...)`; experiment rows carry a consistent, non-null column
+schema (Arize rejects ragged rows); pass the base64 space GID as `space=…`.
 
 ## Sandbox safety
 
