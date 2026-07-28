@@ -376,7 +376,7 @@ jobs:
         with: { python-version: "3.11" }
       - run: pip install -r requirements.txt   <span class="code-cmt"># incl. arize-ax-cli</span>
       - name: AX CLI profile from secrets
-        run: ax profiles create gic-ci --api-key "$ARIZE_API_KEY" --auth-method api-key
+        run: ax profiles create arize-ci --api-key "$ARIZE_API_KEY" --auth-method api-key
       - name: Run the skill gate
         run: python ci/gate.py --skill "${{ matrix.skill }}"  <span class="code-cmt"># Arize = system of record</span></pre>
     </details>

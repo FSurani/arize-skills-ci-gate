@@ -1,4 +1,4 @@
-"""Eval 2 unit test (acceptance §11): the verifier path and the rubric path emit
+"""Eval 2 unit test: the verifier path and the rubric path emit
 the SAME EvaluationResult schema, so downstream gating is path-agnostic."""
 import json
 from pathlib import Path

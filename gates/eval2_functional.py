@@ -7,7 +7,7 @@ Dispatch on `case["check"]["type"]`:
                 text (single classify call, good/bad rail + explanation).
 
 BOTH paths return the SAME `EvaluationResult` schema, so the CI gate and the
-report never branch on which path ran (plan §5). Negatives (`check is None`) have
+report never branch on which path ran. Negatives (`check is None`) have
 no functional score and are skipped here — they are Eval 1's concern.
 """
 

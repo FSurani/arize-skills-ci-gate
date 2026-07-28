@@ -1,12 +1,12 @@
 """LLM judges used by Eval 2 (rubric path) and Eval 3 (pairwise).
 
-Judge model = Opus (`claude-opus-4-8`) per plan §0 — judging is one cheap call
+Judge model = Opus (`claude-opus-4-8`) — judging is one cheap call
 per run, so quality is worth it. Temperature 0, single classify call, rails +
 explanation (`provide_explanation` is load-bearing: explanations feed the report,
 demo beat 4, and the stretch optimizer).
 
 Harness-agnostic: this imports the Anthropic API SDK only — never Claude Code /
-Agent SDK symbols (plan §12). Both judges accept an injectable `classify_fn`
+Agent SDK symbols. Both judges accept an injectable `classify_fn`
 so the blinding/unit tests can run without spending tokens or hitting the network.
 """
 

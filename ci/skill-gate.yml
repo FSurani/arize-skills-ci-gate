@@ -1,4 +1,4 @@
-# Reusable skill-gate workflow — the deliverable the customer asked for (plan §7).
+# Reusable skill-gate workflow.
 #
 # Copy this file into any skills repo under .github/workflows/ and call it from a
 # PR workflow (example at the bottom). It runs ci/gate.py (Evals 0-4) on the
@@ -97,15 +97,15 @@ jobs:
         env:
           ARIZE_API_KEY: ${{ secrets.ARIZE_API_KEY }}
         run: |
-          # non-interactive profile (mandatory before other ax commands, plan §7)
-          ax profiles create gic-ci --api-key "$ARIZE_API_KEY" --auth-method api-key || true
+          # non-interactive profile (mandatory before other ax commands)
+          ax profiles create arize-ci --api-key "$ARIZE_API_KEY" --auth-method api-key || true
 
       - name: Run the skill gate
         env:
           ARIZE_API_KEY: ${{ secrets.ARIZE_API_KEY }}
           ARIZE_SPACE_ID: ${{ secrets.ARIZE_SPACE_ID }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ARIZE_PROFILE: gic-ci
+          ARIZE_PROFILE: arize-ci
         run: |
           MOCK_FLAG=""
           if [ "${{ inputs.mock }}" = "true" ] || [ -z "${ANTHROPIC_API_KEY:-}" ]; then

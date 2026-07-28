@@ -2,7 +2,7 @@
 
 Tokens, wall-clock, turns, and estimated cost per run, aggregated per arm. Used
 as the tie-breaker when both variants pass functional gating, and as the
-threshold `max_tokens_per_case_p50` in the CI gate (plan §7).
+threshold `max_tokens_per_case_p50` in the CI gate.
 
 `est_cost_usd` is normally computed by the tracing layer from token counts; if a
 run lacks it, we fall back to a coarse per-token estimate so the report is never

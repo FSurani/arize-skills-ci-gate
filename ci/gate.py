@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """ci/gate.py — single CI entrypoint. Runs Evals 0-4 on a skill and exits
-nonzero on any threshold breach (plan §7).
+nonzero on any threshold breach.
 
 Sequence:
   Eval 0 (structural + security) per variant  →  short-circuit on failure
@@ -18,7 +18,7 @@ LOCAL threshold compute (--local) is kept as an offline / CI-resilience fallback
 and is used automatically if the AX round-trip fails. The legacy best-effort
 non-cc `skill@hash` push is retired.
 
-Flags (cost control, plan §12): --mock, --max-cases, --dry-run, --local.
+Flags (cost control): --mock, --max-cases, --dry-run, --local.
 """
 
 from __future__ import annotations

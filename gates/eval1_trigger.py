@@ -9,7 +9,7 @@ the case's `should_trigger` label:
 
 Computed PER ARM, because the headline demo result is that variant_a's broad
 description trips hard negatives (high FP) while variant_b's tight description
-does not (plan §5 Eval 1, §10 beat 3).
+does not (demo beat 3).
 """
 
 from __future__ import annotations

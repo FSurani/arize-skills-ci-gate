@@ -26,7 +26,7 @@ Every check contributes a CheckResult; the gate PASSES only if all checks pass.
 The aggregate is returned as the shared `EvaluationResult` so downstream gating
 and the report are path-agnostic.
 
-NOTE (plan §5, README): keep this conservative — it demos WHERE the gate lives.
+NOTE (README): keep this conservative — it demos WHERE the gate lives.
 Production should layer a dedicated scanner / guardrail model here.
 """
 

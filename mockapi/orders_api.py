@@ -18,7 +18,7 @@ three ways a naive agent gets it wrong:
              Retry-After header, then succeeds. (Naive agents don't retry.)
 
 Config via env:
-  ORDERS_API_TOKEN   valid token (default "gic-secret-token")
+  ORDERS_API_TOKEN   valid token (default "demo-secret-token")
   ORDERS_API_LOG     path to the request log (default ./orders_api_log.jsonl)
   ORDERS_SEED        integer; controls how many orders exist (default 5)
   PORT               port to bind (default 8077)
@@ -35,7 +35,7 @@ from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
-TOKEN = os.environ.get("ORDERS_API_TOKEN", "gic-secret-token")
+TOKEN = os.environ.get("ORDERS_API_TOKEN", "demo-secret-token")
 LOG_PATH = Path(os.environ.get("ORDERS_API_LOG", "orders_api_log.jsonl"))
 N_ORDERS = int(os.environ.get("ORDERS_SEED", "5"))
 PAGE_SIZE = 2                      # small on purpose → pagination required

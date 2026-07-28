@@ -1,4 +1,4 @@
-"""Eval 0 unit test (acceptance §11): the known-bad fixture skill must FAIL, and
+"""Eval 0 unit test: the known-bad fixture skill must FAIL, and
 the real skills must PASS."""
 from pathlib import Path
 

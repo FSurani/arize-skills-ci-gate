@@ -1,4 +1,4 @@
-"""Eval 3 blinding unit test (acceptance §11): the text handed to the judge must
+"""Eval 3 blinding unit test: the text handed to the judge must
 contain NO variant-identifying strings."""
 import re
 

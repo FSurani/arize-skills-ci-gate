@@ -1,11 +1,11 @@
 """AX tracing wiring for the harness.
 
-Primary path (plan §4 step 2): the **Coding Harness Tracing plugin** instruments
+Primary path: the **Coding Harness Tracing plugin** instruments
 Claude Code via settings.json hooks (SessionStart/PreToolUse/PostToolUse/…),
 which fire for both the `claude` CLI and the Agent SDK because the SDK reads the
 same settings. This module writes the sandbox's project-local
 `.claude/settings.local.json` with the AX `env` block the plugin reads, plus a
-permission denylist so headless bypass stays safe (plan §7).
+permission denylist so headless bypass stays safe.
 
 Supplementary path: `ax_tracer_provider()` registers a direct OpenInference→AX
 OTLP exporter via `arize-otel`, so run_case.py can emit a normalized agent/tool
@@ -21,7 +21,7 @@ import json
 import os
 from pathlib import Path
 
-# Shell patterns blocked even under bypass-permissions in the sandbox (plan §7).
+# Shell patterns blocked even under bypass-permissions in the sandbox.
 DEFAULT_DENYLIST = [
     "Bash(rm:*)",
     "Bash(sudo:*)",
@@ -39,7 +39,7 @@ DEFAULT_DENYLIST = [
 def write_sandbox_settings(
     sandbox: str | Path,
     *,
-    project_name: str = "gic-skills-eval",
+    project_name: str = "skills-eval",
     dry_run: bool | None = None,
     denylist: list[str] | None = None,
     plugin_hooks: dict | None = None,
@@ -90,7 +90,7 @@ def plugin_dir() -> Path | None:
     return p if (p / ".claude-plugin" / "plugin.json").exists() else None
 
 
-def ax_env(project_name: str = "gic-skills-eval") -> dict[str, str]:
+def ax_env(project_name: str = "skills-eval") -> dict[str, str]:
     """The ARIZE_* env the tracing plugin reads. ARIZE_SPACE_ID stays in its
     base64/console form here — that is what OTLP tracing expects (unlike the CLI,
     which wants the decoded form for its REST calls)."""
@@ -105,7 +105,7 @@ def ax_env(project_name: str = "gic-skills-eval") -> dict[str, str]:
     }
 
 
-def ax_tracer_provider(project_name: str = "gic-skills-eval"):
+def ax_tracer_provider(project_name: str = "skills-eval"):
     """Supplementary direct OTLP→AX exporter (OpenInference conventions).
 
     Returns a configured tracer provider, or None if creds/deps are missing.

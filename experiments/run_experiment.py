@@ -1,10 +1,10 @@
-"""AX experiment layer — the system-of-record for skill versions (plan §6).
+"""AX experiment layer — the system-of-record for skill versions.
 
 CLI-first (the team's stated goal): uses the `ax` CLI for datasets + experiments.
 One experiment per (skill, arm), named by SKILL.md **content hash** so naming is
-append-only and never needs a delete (plan §6). Evals 1-4 computed locally are
+append-only and never needs a delete. Evals 1-4 computed locally are
 attached as pass-through columns on the experiment runs, so AX shows populated
-eval columns (acceptance §11).
+eval columns.
 
 Live-validated recipe (ax v0.25, 2026-07-27) — and the pre-release quirks it
 works around:
@@ -45,7 +45,7 @@ from common import RunResult  # noqa: E402
 # ARIZE_SPACE_ID stays in its console/base64/tracing form; the CLI write commands
 # (create) want exactly this form.
 SPACE = os.environ.get("ARIZE_SPACE_ID", "")
-PROFILE = os.environ.get("ARIZE_PROFILE", "gic-ci")
+PROFILE = os.environ.get("ARIZE_PROFILE", "arize-ci")
 STATE_PATH = REPO / "report" / "out" / "ax_state.json"
 
 SKILL_SRC = {
@@ -145,7 +145,7 @@ def ensure_profile() -> bool:
 def ensure_dataset(skill: str, cases: list[dict]) -> str | None:
     """Return the dataset **id**, creating it if we don't already know it.
     Idempotency uses a local state file because `datasets list` is unreliable for
-    this space; we never delete (plan §6)."""
+    this space; we never delete."""
     name = dataset_name(skill)
     state = _load_state()
     if not PRINT_ONLY and state.get("datasets", {}).get(name):

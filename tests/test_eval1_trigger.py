@@ -1,4 +1,4 @@
-"""Eval 1 unit test (acceptance §11): synthetic triggered/untriggered traces
+"""Eval 1 unit test: synthetic triggered/untriggered traces
 produce the correct FP/FN rates, per arm."""
 from common import RunResult, ToolSpan, skill_marker_path
 import eval1_trigger as e1

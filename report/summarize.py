@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""report/summarize.py — the final comparison report (plan §8, demo beat 5).
+"""report/summarize.py — the final comparison report (demo beat 5).
 
 Reads the main-split gate output (report/out/gate_<skill>.json, produced by
 ci/gate.py) and adds:
   - the skill_off baseline column,
   - Eval 3 pairwise win rate (Skill A variants only),
   - the HOLDOUT pass rate, scored EXACTLY ONCE here (never during iteration,
-    plan §3/§8 — this is the honest answer to the overfitting question),
+    this is the honest answer to the overfitting question),
   - the AX experiment-comparison pointer.
 
 Run order:  python ci/gate.py --skill <s> [--mock]   then   python report/summarize.py --skill <s> [--mock]

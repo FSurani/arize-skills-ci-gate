@@ -1,11 +1,11 @@
 """Deterministic verifiers for Skill A (api-helper) task cases.
 
 Each `verifiers/api_helper/<case_id>.py` is a thin shim that calls
-`make_verify("<case_id>")` from here, so the per-case entry points exist (plan
-§1 layout) while the assertions live in one testable place.
+`make_verify("<case_id>")` from here, so the per-case entry points exist while
+the assertions live in one testable place.
 
 A verifier receives the final sandbox state and passes/fails on TWO kinds of
-evidence, per plan §2/§5:
+evidence:
   1. the OUTPUT the agent wrote to the file the task named, and
   2. HOW it called the mock Orders API — read from the request log the mock
      writes to `orders_api_log.jsonl` (auth header used, pagination followed,

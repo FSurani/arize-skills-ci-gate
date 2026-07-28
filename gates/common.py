@@ -1,13 +1,13 @@
 """Shared, harness-agnostic types for all gates (Evals 0-4).
 
-Design rule (plan §12): NOTHING in `gates/` may import Claude-Code / Agent-SDK
+Design rule: NOTHING in `gates/` may import Claude-Code / Agent-SDK
 symbols. Gates consume a normalized `RunResult` (produced by whatever harness ran
 the case) plus, for verifiers, the final sandbox state. This lets a second harness
 (Cursor, OpenHands, ...) be added later with zero evaluator changes.
 
 Every gate emits the SAME `EvaluationResult` shape (label / score / explanation)
 regardless of whether it ran a deterministic verifier or an LLM rubric judge, so
-the CI gate and the report never branch on "which path ran" (plan §5, Eval 2).
+the CI gate and the report never branch on "which path ran" (Eval 2).
 """
 
 from __future__ import annotations
@@ -110,7 +110,7 @@ class RunResult:
 # ─────────────────────────────────────────────────────────────────────────────
 # Skill-load detection — shared by the harness (to stamp `triggered`) and Eval 1.
 # Kept here so the detection logic has exactly one definition and can be
-# unit-tested against synthetic trace fixtures (plan §4 step 3, acceptance §11).
+# unit-tested against synthetic trace fixtures.
 # ─────────────────────────────────────────────────────────────────────────────
 def skill_marker_path(skill_name: str) -> str:
     """The path substring that indicates the skill's SKILL.md was loaded."""

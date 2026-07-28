@@ -4,12 +4,12 @@ For each task case, present variant_a's and variant_b's final outputs to a judge
 that is blind to variant identity, in a per-case randomized A/B order, and record
 winner + rationale plus an absolute 1-5 score per run.
 
-Blinding is load-bearing and UNIT-TESTED (acceptance §11): the text handed to the
+Blinding is load-bearing and UNIT-TESTED: the text handed to the
 judge must contain NO variant-identifying strings. `blinded_inputs` is returned so
 the test can grep it. Order is derived deterministically from the case id (no
 RNG) so runs are reproducible.
 
-Second method (AX differentiator, plan §5/§10 beat 3): the SAME experiment runs
+Second method (AX differentiator, demo beat 3): the SAME experiment runs
 are ALSO scored by AX's built-in Agent-as-a-Judge, registered/triggered in the
 experiment layer (experiments/run_experiment.py + ci/gate.py via `ax evaluators`
 / `ax tasks trigger-run`). Both methods are shown side-by-side in the report.

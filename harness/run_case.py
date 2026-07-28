@@ -3,19 +3,19 @@
 Two execution paths:
 
   REAL  (default when creds + SDK present): a sandboxed headless Claude Code run
-        via **ClaudeSDKClient** (plan §4). Standardized on ClaudeSDKClient for
+        via **ClaudeSDKClient**. Standardized on ClaudeSDKClient for
         stream capture of per-turn / per-tool events. Tracing flows to AX through
         the coding-harness-tracing plugin's settings.json hooks (written by
         tracing.write_sandbox_settings). Model pinned to HARNESS_MODEL (Sonnet).
 
   MOCK  (--mock, or auto when SDK/creds absent): a deterministic simulator that
-        reproduces the engineered variant deltas (context §2) WITHOUT spending
+        reproduces the engineered variant deltas WITHOUT spending
         tokens, so ci/gate.py and the report run end-to-end offline. For
         api-helper it writes a realistic mock-API request log + output files that
         the REAL verifiers score, so Eval 2's verifier path is genuinely
         exercised. Clearly labeled in result metadata as mock.
 
-Sandbox safety (plan §7, §12): every run gets a fresh disposable workdir; the
+Sandbox safety: every run gets a fresh disposable workdir; the
 skill installs at .claude/skills/<name>/SKILL.md; settings.local.json carries the
 AX env block + a dangerous-command denylist. The harness never writes outside its
 workdir.
@@ -47,9 +47,9 @@ MAX_TURNS = 40
 
 # Sandboxes MUST live OUTSIDE the repo — otherwise a real agent walks up the tree,
 # finds the real mockapi/.venv/skills, and works around the harness (isolation
-# failure, plan §12). Default to a temp dir; callers may override.
+# failure). Default to a temp dir; callers may override.
 DEFAULT_WORK_ROOT = Path(os.environ.get("SKILLS_EVAL_WORK_ROOT",
-                                        str(Path(tempfile.gettempdir()) / "gic-skills-eval-runs")))
+                                        str(Path(tempfile.gettempdir()) / "skills-eval-runs")))
 
 SKILL_DIRS = {
     ("api-helper", "variant_a"): REPO / "skills/api-helper/variant_a",
@@ -114,7 +114,7 @@ def start_mock_api(sandbox: Path, seed: int = 5):
     port = _free_port()
     log_path = sandbox / "orders_api_log.jsonl"
     env = {**os.environ,
-           "ORDERS_API_TOKEN": "gic-secret-token",
+           "ORDERS_API_TOKEN": "demo-secret-token",
            "ORDERS_API_LOG": str(log_path),
            "ORDERS_SEED": str(seed),
            "PORT": str(port)}
@@ -130,7 +130,7 @@ def start_mock_api(sandbox: Path, seed: int = 5):
             break
         except Exception:  # noqa: BLE001
             time.sleep(0.1)
-    return proc, base, "gic-secret-token"
+    return proc, base, "demo-secret-token"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -247,7 +247,7 @@ _VARIANT_A_FAILS = {"t01", "t04", "t05", "t07", "t12", "e02", "t09", "t10"}
 
 
 def _good_log(case_id: str) -> list[dict]:
-    tok = {"X-Org-Token": "gic-secret-token"}
+    tok = {"X-Org-Token": "demo-secret-token"}
     if case_id in ("t01", "t05", "t07", "t12", "t09", "t10"):
         return [{"method": "GET", "path": "/orders", "headers": tok, "status": 200, "page_start": s}
                 for s in (0, 2, 4)]

@@ -1,4 +1,4 @@
-# Per-gate thresholds for the CI gate (plan §7). Demo defaults + per-skill overrides.
+# Per-gate thresholds for the CI gate. Demo defaults + per-skill overrides.
 # gate.py fails (exit 1) if the gated variant breaches any of these.
 
 default:
