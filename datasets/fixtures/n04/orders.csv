@@ -1,0 +1,6 @@
+order_id,customer,sku,units
+1001,ACME,WIDGET-1,3
+1002,Globex,WIDGET-2,1
+1001,ACME,WIDGET-1,3
+1003,Initech,WIDGET-3,2
+1002,Globex,WIDGET-2,1

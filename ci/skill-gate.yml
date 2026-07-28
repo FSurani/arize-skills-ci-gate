@@ -1,0 +1,135 @@
+# Reusable skill-gate workflow — the deliverable the customer asked for (plan §7).
+#
+# Copy this file into any skills repo under .github/workflows/ and call it from a
+# PR workflow (example at the bottom). It runs ci/gate.py (Evals 0-4) on the
+# skills changed in the PR, standardized on Arize AX, and fails the check on any
+# threshold breach.
+#
+# Secrets (set as repo or org secrets):
+#   ARIZE_API_KEY, ARIZE_SPACE_ID   — required (AX system-of-record)
+#   ANTHROPIC_API_KEY               — required for REAL harness + Opus judge;
+#                                     if absent, the gate runs in --mock mode.
+
+name: skill-gate
+
+on:
+  workflow_call:
+    inputs:
+      skill:
+        description: "Gate a specific skill; empty = auto-detect changed skills"
+        required: false
+        type: string
+        default: ""
+      mock:
+        description: "Force the offline simulator (no tokens spent)"
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      ARIZE_API_KEY:
+        required: true
+      ARIZE_SPACE_ID:
+        required: true
+      ANTHROPIC_API_KEY:
+        required: false
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      skills: ${{ steps.pick.outputs.skills }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: pick
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.skill }}" ]; then
+            echo "skills=[\"${{ inputs.skill }}\"]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          BASE="${{ github.event.pull_request.base.sha }}"
+          BASE="${BASE:-$(git rev-parse HEAD~1)}"
+          # map changed files under skills/<name>/... to unique skill names
+          CHANGED=$(git diff --name-only "$BASE" HEAD -- 'skills/**' \
+            | sed -n 's#^skills/\([^/]*\)/.*#\1#p' | sort -u | grep -v '^_' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "skills=[]" >> "$GITHUB_OUTPUT"
+          else
+            JSON=$(printf '%s\n' "$CHANGED" | jq -R . | jq -cs .)
+            echo "skills=$JSON" >> "$GITHUB_OUTPUT"
+          fi
+
+  gate:
+    needs: detect
+    if: needs.detect.outputs.skills != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        skill: ${{ fromJson(needs.detect.outputs.skills) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies (incl. arize-ax-cli)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Claude Code + tracing plugin (real harness only)
+        if: ${{ !inputs.mock && env.ANTHROPIC_API_KEY != '' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # tracing plugin (settings.json hooks → AX)
+          claude plugin marketplace add Arize-ai/coding-harness-tracing || true
+          claude plugin install claude-code-tracing@coding-harness-tracing || true
+
+      - name: Create AX CLI profile from secrets
+        env:
+          ARIZE_API_KEY: ${{ secrets.ARIZE_API_KEY }}
+        run: |
+          # non-interactive profile (mandatory before other ax commands, plan §7)
+          ax profiles create gic-ci --api-key "$ARIZE_API_KEY" --auth-method api-key || true
+
+      - name: Run the skill gate
+        env:
+          ARIZE_API_KEY: ${{ secrets.ARIZE_API_KEY }}
+          ARIZE_SPACE_ID: ${{ secrets.ARIZE_SPACE_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ARIZE_PROFILE: gic-ci
+        run: |
+          MOCK_FLAG=""
+          if [ "${{ inputs.mock }}" = "true" ] || [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+            MOCK_FLAG="--mock"
+            echo "::notice::running gate in mock mode (no ANTHROPIC_API_KEY or mock=true)"
+          fi
+          python ci/gate.py --skill "${{ matrix.skill }}" $MOCK_FLAG
+
+      - name: Upload gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-${{ matrix.skill }}
+          path: report/out/gate_${{ matrix.skill }}.json
+          if-no-files-found: ignore
+
+# ── Example caller (put in .github/workflows/pr.yml of the skills repo) ────────
+#
+# name: PR skill gate
+# on: { pull_request: { paths: ["skills/**"] } }
+# jobs:
+#   gate:
+#     uses: your-org/skills-eval-demo/.github/workflows/skill-gate.yml@main
+#     secrets:
+#       ARIZE_API_KEY: ${{ secrets.ARIZE_API_KEY }}
+#       ARIZE_SPACE_ID: ${{ secrets.ARIZE_SPACE_ID }}
+#       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

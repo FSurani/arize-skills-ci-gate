@@ -1,0 +1,16 @@
+# Per-gate thresholds for the CI gate (plan §7). Demo defaults + per-skill overrides.
+# gate.py fails (exit 1) if the gated variant breaches any of these.
+
+default:
+  eval0: all_checks_pass          # structural + security must fully pass (short-circuit)
+  trigger_fp_rate_max: 0.10       # hard-negatives that wrongly triggered
+  trigger_fn_rate_max: 0.10       # positives that failed to trigger
+  functional_pass_rate_min: 0.80  # Eval 2 pass@1 over task/edge cases
+  max_tokens_per_case_p50: 30000  # Eval 4 efficiency ceiling (median)
+
+# Per-skill overrides merge over `default`.
+skills:
+  api-helper: {}                  # uses defaults
+  story-writer:
+    # non-verifiable skill: functional via rubric judge; keep the same bar.
+    functional_pass_rate_min: 0.80

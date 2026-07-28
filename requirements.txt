@@ -1,0 +1,28 @@
+# ── Arize AX ───────────────────────────────────────────────────────────────
+arize>=8.32.0            # AX Python SDK (experiments, datasets)
+arize-ax-cli>=0.25.0     # `ax` CLI — the CI-facing surface the customer asked for
+arize-otel>=0.13.0       # OTLP exporter config helper for AX
+
+# ── Tracing (OpenInference → AX) ─────────────────────────────────────────────
+openinference-semantic-conventions>=0.1.30
+opentelemetry-sdk>=1.24.0
+opentelemetry-exporter-otlp-proto-grpc>=1.24.0
+
+# ── Claude Code harness (Agent SDK) ──────────────────────────────────────────
+# Hooks — and therefore the tracing plugin — fire ONLY with ClaudeSDKClient,
+# never with the standalone query(). run_case.py depends on this package.
+claude-agent-sdk>=0.1.0
+
+# ── Judge / eval plumbing ────────────────────────────────────────────────────
+anthropic>=0.40.0
+pandas>=2.0.0
+
+# ── Skill lint + config ──────────────────────────────────────────────────────
+python-frontmatter>=1.1.0
+PyYAML>=6.0
+markdown-it-py>=3.0.0
+
+# ── Mock API (verifier fixtures) + tests ─────────────────────────────────────
+flask>=3.0.0
+requests>=2.31.0
+pytest>=8.0.0

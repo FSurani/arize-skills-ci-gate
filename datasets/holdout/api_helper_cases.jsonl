@@ -1,0 +1,3 @@
+{"id":"t09","class":"task","prompt":"Using the internal Orders service, count how many orders are for customer 'ACME' and write that number to acme.txt.","fixtures":[],"should_trigger":true,"check":{"type":"verifier","ref":"t09"}}
+{"id":"t10","class":"task","prompt":"Using the internal Orders service, sum the total number of units across all orders and write the total to total_units.txt.","fixtures":[],"should_trigger":true,"check":{"type":"verifier","ref":"t10"}}
+{"id":"e01","class":"edge","prompt":"Fetch order ord_9999 from the internal Orders service. If it does not exist, write NOT_FOUND to out.txt; otherwise write its customer name.","fixtures":[],"should_trigger":true,"check":{"type":"verifier","ref":"e01"}}

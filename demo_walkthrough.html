@@ -1,0 +1,483 @@
+<style>
+  :root {
+    --ground: #f5f5fa; --surface: #ffffff; --surface-2: #f0eff8; --ink: #1b1a26;
+    --ink-soft: #4b4a5e; --muted: #77768c; --line: #e3e2ef; --accent: #574fd6;
+    --accent-deep: #3a338c; --accent-wash: #ecebfb; --live: #0f8a63; --live-wash: #e2f4ec;
+    --guide: #a8690a; --guide-wash: #f8eeda; --crit: #b3364a; --crit-wash: #fbe7ec;
+    --code-bg: #1c1b28; --code-ink: #e7e6f5; --code-accent: #b7b1f5; --code-dim: #807e9c;
+    --radius: 12px; --maxw: 64rem;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Menlo", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #121119; --surface: #1b1a26; --surface-2: #232231; --ink: #edecf6;
+      --ink-soft: #c3c1d6; --muted: #8b899f; --line: #2e2c3e; --accent: #8b83f0;
+      --accent-deep: #b7b1f5; --accent-wash: #241f3f; --live: #4cc79a; --live-wash: #14271f;
+      --guide: #e0a54a; --guide-wash: #2e2413; --crit: #e8879a; --crit-wash: #2e1720;
+      --code-bg: #0d0c15; --code-ink: #e7e6f5; --code-accent: #b7b1f5; --code-dim: #6f6d8a;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground: #f5f5fa; --surface: #ffffff; --surface-2: #f0eff8; --ink: #1b1a26; --ink-soft: #4b4a5e;
+    --muted: #77768c; --line: #e3e2ef; --accent: #574fd6; --accent-deep: #3a338c; --accent-wash: #ecebfb;
+    --live: #0f8a63; --live-wash: #e2f4ec; --guide: #a8690a; --guide-wash: #f8eeda; --crit: #b3364a;
+    --crit-wash: #fbe7ec; --code-bg: #1c1b28; --code-ink: #e7e6f5; --code-accent: #b7b1f5; --code-dim: #807e9c;
+  }
+  :root[data-theme="dark"] {
+    --ground: #121119; --surface: #1b1a26; --surface-2: #232231; --ink: #edecf6; --ink-soft: #c3c1d6;
+    --muted: #8b899f; --line: #2e2c3e; --accent: #8b83f0; --accent-deep: #b7b1f5; --accent-wash: #241f3f;
+    --live: #4cc79a; --live-wash: #14271f; --guide: #e0a54a; --guide-wash: #2e2413; --crit: #e8879a;
+    --crit-wash: #2e1720; --code-bg: #0d0c15; --code-ink: #e7e6f5; --code-accent: #b7b1f5; --code-dim: #6f6d8a;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans);
+         line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent-deep); }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+
+  .eyebrow { font-family: var(--mono); font-size: .72rem; letter-spacing: .16em; text-transform: uppercase;
+             color: var(--accent); font-weight: 600; }
+  h1 { font-size: clamp(1.9rem, 4vw, 2.8rem); line-height: 1.08; margin: .5rem 0 .5rem; letter-spacing: -.02em;
+       text-wrap: balance; }
+  .lede { color: var(--ink-soft); font-size: 1.08rem; max-width: 48rem; margin: 0; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.75rem; margin-bottom: 1.5rem; }
+
+  nav.toc { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: .3rem;
+            background: color-mix(in srgb, var(--ground) 88%, transparent); backdrop-filter: blur(8px);
+            padding: .6rem 0; margin-bottom: 1.5rem; border-bottom: 1px solid var(--line); }
+  nav.toc a { font-family: var(--mono); font-size: .74rem; letter-spacing: .02em; text-decoration: none;
+              color: var(--ink-soft); padding: .3rem .6rem; border-radius: 6px; }
+  nav.toc a:hover { background: var(--accent-wash); color: var(--accent-deep); }
+
+  section { margin-top: 2.75rem; scroll-margin-top: 3.5rem; }
+  .step-label { font-family: var(--mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase;
+                color: var(--accent); font-weight: 600; }
+  h2 { font-size: 1.5rem; letter-spacing: -.01em; margin: .3rem 0 .4rem; text-wrap: balance; }
+  section > p { color: var(--ink-soft); max-width: 48rem; }
+  h3 { font-size: 1.05rem; margin: 1.4rem 0 .3rem; }
+
+  /* flow diagram */
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: .5rem; margin: 1.3rem 0; }
+  .flow .st { flex: 1 1 8rem; min-width: 8rem; background: var(--surface); border: 1px solid var(--line);
+              border-radius: 10px; padding: .7rem .8rem; position: relative; }
+  .flow .st .num { font-family: var(--mono); font-size: .66rem; color: var(--muted); }
+  .flow .st .t { font-weight: 600; font-size: .92rem; display: block; margin-top: .1rem; }
+  .flow .st .d { font-size: .78rem; color: var(--muted); }
+  .flow .st.gate { border-color: var(--accent); }
+  .flow .st.good { border-left: 3px solid var(--live); }
+  .flow .arrow { align-self: center; color: var(--muted); font-family: var(--mono); }
+
+  .grid2 { display: grid; gap: 1.1rem; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); margin-top: 1rem; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.2rem 1.3rem; }
+  .card .kind { font-family: var(--mono); font-size: .68rem; letter-spacing: .06em; text-transform: uppercase;
+                padding: .18rem .5rem; border-radius: 999px; }
+  .kind.verif { color: var(--accent-deep); background: var(--accent-wash); }
+  .kind.judge { color: var(--guide); background: var(--guide-wash); }
+  .card h3 { margin: .6rem 0 .3rem; font-size: 1.15rem; }
+  .card p { margin: 0 0 .3rem; font-size: .92rem; color: var(--ink-soft); }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); margin-top: 1rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; min-width: 36rem; }
+  th, td { text-align: left; padding: .7rem .9rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-family: var(--mono); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+       background: var(--surface-2); }
+  tr:last-child td { border-bottom: none; }
+  td .e { font-family: var(--mono); font-weight: 600; color: var(--accent-deep); }
+  .pill { font-family: var(--mono); font-size: .66rem; text-transform: uppercase; letter-spacing: .05em;
+          padding: .12rem .45rem; border-radius: 999px; }
+  .pill.code { color: var(--accent-deep); background: var(--accent-wash); }
+  .pill.llm { color: var(--guide); background: var(--guide-wash); }
+
+  details.code { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-top: .7rem; }
+  details.code > summary { cursor: pointer; padding: .75rem 1rem; font-family: var(--mono); font-size: .8rem;
+                           font-weight: 600; color: var(--accent-deep); background: var(--surface-2); list-style: none; }
+  details.code > summary::before { content: "▸ "; color: var(--muted); }
+  details.code[open] > summary::before { content: "▾ "; }
+  details.code pre { margin: 0; padding: .9rem 1rem; background: var(--code-bg); color: var(--code-ink);
+                     font-family: var(--mono); font-size: .76rem; line-height: 1.5; overflow-x: auto; white-space: pre; }
+  .code-cmt { color: var(--code-dim); }
+  .code-k { color: var(--code-accent); }
+
+  .out { background: var(--code-bg); border-radius: 9px; overflow: hidden; margin-top: 1rem; }
+  .out-label { font-family: var(--mono); font-size: .64rem; letter-spacing: .1em; text-transform: uppercase;
+               color: var(--code-dim); padding: .5rem .9rem .1rem; }
+  .out pre { margin: 0; padding: .3rem .9rem .8rem; color: var(--code-ink); font-family: var(--mono);
+             font-size: .8rem; line-height: 1.55; overflow-x: auto; white-space: pre; }
+  .out .ok { color: #6ee7b7; } .out .bad { color: #f7a8b8; } .out .dim { color: var(--code-dim); } .out .k { color: var(--code-accent); }
+
+  .linkrow { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .3rem; }
+  .axbtn { display: inline-flex; align-items: center; gap: .45rem; font-family: var(--mono); font-size: .8rem;
+           font-weight: 600; text-decoration: none; color: #fff; background: var(--accent); padding: .55rem .9rem;
+           border-radius: 8px; }
+  .axbtn:hover { background: var(--accent-deep); }
+  .axbtn.ghost { color: var(--accent-deep); background: var(--accent-wash); }
+  .axbtn.ghost:hover { background: var(--accent-wash); filter: brightness(.97); }
+  .axbtn::before { content: "↗"; font-weight: 700; }
+  .edit { display: inline-flex; align-items: center; gap: .35rem; font-family: var(--mono); font-size: .72rem;
+          font-weight: 600; text-decoration: none; color: var(--ink-soft); background: var(--surface-2);
+          border: 1px solid var(--line); padding: .3rem .6rem; border-radius: 6px; }
+  .edit:hover { border-color: var(--accent); color: var(--accent-deep); }
+  .edit::before { content: "❮❯"; font-size: .7em; opacity: .7; }
+  .editrow { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .5rem; }
+  .evlink { font-family: var(--mono); font-size: .72rem; font-weight: 600; text-decoration: none;
+            color: var(--accent-deep); white-space: nowrap; }
+  .evlink:hover { text-decoration: underline; }
+  .evlink::after { content: " ↗"; }
+
+  .look { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); margin-top: 1rem; }
+  .look .t { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .look .t.pass { border-left: 3px solid var(--live); }
+  .look .t.fail { border-left: 3px solid var(--crit); }
+  .look .t h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .look .t .status { font-family: var(--mono); font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; }
+  .look .t.pass .status { color: var(--live); } .look .t.fail .status { color: var(--crit); }
+  .look .t p { margin: .4rem 0 .6rem; font-size: .88rem; color: var(--ink-soft); }
+  .look .t code { font-family: var(--mono); font-size: .82em; background: var(--surface-2); padding: .05em .3em; border-radius: 4px; }
+
+  .mini-grid { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); margin-top: 1rem; }
+  .mini { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .mini .k { font-family: var(--mono); font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+  .mini h4 { margin: .25rem 0 .3rem; font-size: 1rem; } .mini p { margin: 0; font-size: .88rem; color: var(--ink-soft); }
+  .note { font-size: .85rem; color: var(--muted); border-left: 3px solid var(--line); padding: .1rem 0 .1rem .8rem; margin-top: 1rem; }
+  code.inl { font-family: var(--mono); font-size: .84em; background: var(--surface-2); padding: .08em .35em; border-radius: 4px; color: var(--ink); }
+  footer { margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid var(--line); font-family: var(--mono);
+           font-size: .76rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Arize AX · Reference Implementation</div>
+    <h1>Gating AI-Authored Skills in CI</h1>
+    <p class="lede">A worked example for an <b>internal skills registry</b>: replace an inline
+      <code class="inl">evals.json</code> + Sentry scan with one reusable, Arize-native CI gate —
+      covering both verifiable skills (deterministic checks) and non-verifiable ones (LLM judge),
+      with every run recorded in Arize.</p>
+  </header>
+
+  <nav class="toc">
+    <a href="#build">Build</a>
+    <a href="#skills">Skills</a>
+    <a href="#evals">Evals</a>
+    <a href="#security">Security</a>
+    <a href="#ci">CI gate</a>
+    <a href="#arize">See it in Arize</a>
+    <a href="#arch">Architecture</a>
+  </nav>
+
+  <section id="build">
+    <div class="step-label">What we're building</div>
+    <h2>One reusable gate, standardized on Arize</h2>
+    <p>Teams author many skills across the registry — API helpers, user-story writers, and more.
+      Today they're gated in CI by an inline three-phase <code class="inl">evals.json</code> plus a
+      Sentry skill-scan. This reference folds all of that into a single GitHub Actions workflow that
+      runs the same phases on Arize AX and blocks the PR on any breach.</p>
+    <div class="flow">
+      <div class="st"><span class="num">on PR</span><span class="t">Skill changes</span><span class="d">SKILL.md added / edited</span></div>
+      <div class="arrow">→</div>
+      <div class="st gate"><span class="num">gate · phase 1</span><span class="t">Eval 0</span><span class="d">structural + security scan</span></div>
+      <div class="arrow">→</div>
+      <div class="st gate"><span class="num">gate</span><span class="t">Harness run</span><span class="d">headless Claude Code, traced</span></div>
+      <div class="arrow">→</div>
+      <div class="st gate"><span class="num">gate · phases 2–3</span><span class="t">Arize experiment</span><span class="d">hub evaluators score it</span></div>
+      <div class="arrow">→</div>
+      <div class="st good"><span class="num">verdict</span><span class="t">Threshold → ✓ / ✗</span><span class="d">read from Arize, exit 0/1</span></div>
+    </div>
+    <p class="note">Arize is the system of record: the gate creates an experiment per skill version,
+      lets Arize's evaluators score it server-side, then reads those scores back to decide pass/fail.
+      The experiment history in Arize <i>is</i> the skill's version history.</p>
+  </section>
+
+  <section id="skills">
+    <div class="step-label">The skills</div>
+    <h2>Two examples — because the registry is heterogeneous</h2>
+    <p>A gate is only useful if it covers <i>every</i> kind of skill. So this reference carries one
+      of each: a <b>verifiable</b> API skill (there's a right answer) and a <b>non-verifiable</b>
+      writing skill (quality is judged, not checked).</p>
+    <div class="grid2">
+      <div class="card">
+        <span class="kind verif">Verifiable</span>
+        <h3>api-helper</h3>
+        <p>Call the internal Orders service correctly — auth header, pagination, retries, error
+          handling. Correctness is checked deterministically against a mock API.</p>
+        <p>Shipped in <b>two variants</b> to show description tuning: a broad one (over-triggers) and
+          a tight one with a worked example (clean).</p>
+        <details class="code"><summary>variant_b/SKILL.md — the tight version</summary>
+<pre><span class="code-cmt">---
+name: api-helper
+description: Call the internal Orders service, and ONLY that service …
+  Do NOT use for generic HTTP, third-party APIs, CSV parsing, or unrelated
+  pagination/error-handling questions.
+---</span>
+
+<span class="code-k"># Orders Service Helper (internal)</span>
+
+## Connection &amp; auth
+- Base URL: the ORDERS_API_BASE environment variable.
+- Auth: header <span class="code-k">X-Org-Token: &lt;ORDERS_API_TOKEN&gt;</span>.
+  Do NOT use Authorization: Bearer — the service returns 401.
+
+## Pagination (required for "all orders")
+GET /orders returns {"data":[…], "next_cursor": …}. Loop on ?cursor=
+until next_cursor is null. Do not stop after page one.
+
+## Retries
+On 503/429, honor Retry-After and retry once.
+
+## Worked example — count all orders (Python) … [full code in repo]</pre>
+        </details>
+        <details class="code"><summary>variant_a/SKILL.md — the broad version (intentionally worse)</summary>
+<pre><span class="code-cmt">---
+name: api-helper
+description: Helps you work with APIs and web services — making HTTP
+  requests, handling authentication, following pagination, processing
+  orders … Use this whenever a task involves calling an API.
+---</span>
+
+<span class="code-k"># API Helper</span>
+Use this skill to talk to our backend services.
+The base URL is in ORDERS_API_BASE. Send an authentication header.
+Some list endpoints are paginated. Handle errors as they come up.
+
+<span class="code-cmt"># Broad description → fires on unrelated prompts (trigger false-positives);
+# terse body, no auth/pagination specifics → lower task pass rate.</span></pre>
+        </details>
+        <div class="editrow">
+          <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/skills/api-helper/variant_b/SKILL.md">variant_b on GitHub</a>
+          <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/skills/api-helper/variant_a/SKILL.md">variant_a on GitHub</a>
+        </div>
+      </div>
+      <div class="card">
+        <span class="kind judge">Non-verifiable</span>
+        <h3>story-writer</h3>
+        <p>Turn a feature request into INVEST-style user stories following the team's template. There's no
+          single correct output — quality is judged against a rubric by an LLM.</p>
+        <p>This is the case an assertion-based gate can't handle — and the reason the framework needs
+          a judge path.</p>
+        <details class="code"><summary>story-writer/SKILL.md</summary>
+<pre><span class="code-cmt">---
+name: story-writer
+description: Write user stories for the team's backlog following the internal
+  INVEST-based template — a user-voice statement plus testable
+  acceptance criteria.
+---</span>
+
+<span class="code-k">## Output template</span>
+**Story:** As a &lt;specific role&gt;, I want &lt;capability&gt; so that &lt;benefit&gt;.
+**Acceptance Criteria:** 2–5 testable Given/When/Then outcomes.
+
+<span class="code-k">## Quality bar (INVEST)</span>
+Independent · Negotiable · Valuable · Estimable · Small · Testable
+- Use a SPECIFIC role (not "user"). Split epics into multiple stories.
+- Do not invent requirements that weren't stated.</pre>
+        </details>
+        <div class="editrow">
+          <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/skills/story-writer/SKILL.md">story-writer/SKILL.md on GitHub</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="evals">
+    <div class="step-label">The evals</div>
+    <h2>What the gate checks</h2>
+    <p>The three phases from <code class="inl">evals.json</code>, plus efficiency, expressed as
+      evaluators. The functional phase has <b>two interchangeable paths</b> that emit the same
+      result shape — so the gate doesn't care whether a skill is verifiable.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Eval</th><th>Phase</th><th>What it checks</th><th>How</th><th>In Arize</th></tr></thead>
+        <tbody>
+          <tr><td><span class="e">Eval 0</span></td><td>1 · structural + security</td><td>Frontmatter, referenced files, no absolute paths; prompt-injection scan, embedded secrets, unsafe bundled scripts</td><td><span class="pill code">code</span></td><td><span style="font-family:var(--mono);font-size:.72rem;color:var(--muted)">in-gate (pre-experiment)</span></td></tr>
+          <tr><td><span class="e">Eval 1</span></td><td>2 · trigger</td><td>Did the skill load exactly when it should? False-positive / false-negative rates</td><td><span class="pill code">code</span></td><td><a class="evlink" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/evaluators/RXZhbHVhdG9yOjEyMDMyOmlQQzE=">cc-eval1-trigger</a></td></tr>
+          <tr><td><span class="e">Eval 2</span></td><td>3 · functional</td><td><b>Verifiable:</b> deterministic verifier vs a mock API. <b>Non-verifiable:</b> rubric LLM judge (good/bad + explanation)</td><td><span class="pill code">code</span> <span class="pill llm">or LLM</span></td><td><a class="evlink" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/evaluators/RXZhbHVhdG9yOjEyMDMzOmh5enY=">cc-eval2-verifier</a> · <a class="evlink" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/evaluators/RXZhbHVhdG9yOjEyMDM1OitLVFM=">cc-eval2-rubric</a></td></tr>
+          <tr><td><span class="e">Eval 4</span></td><td>efficiency</td><td>Tokens / turns per case against a budget — the tie-breaker</td><td><span class="pill code">code</span></td><td><a class="evlink" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/evaluators/RXZhbHVhdG9yOjEyMDM0OjlRVlE=">cc-eval4-efficiency</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Eval 1, 2 and 4 are Arize evaluators (created once, referenced by id, run
+      server-side). Eval 0 runs first, in-gate, and short-circuits the pipeline on failure.</p>
+  </section>
+
+  <section id="security">
+    <div class="step-label">Security gate</div>
+    <h2>The bad skill bounces at the door</h2>
+    <p>Eval 0 is where the Sentry scan standardizes. A skill with a planted prompt-injection and a
+      data-exfiltration script fails immediately, before any model runs:</p>
+    <div class="out">
+      <div class="out-label">Eval 0 — a deliberately malicious skill</div>
+<pre><span class="bad">[no_prompt_injection]</span> instruction-override phrasing; instructs the agent to
+   hide actions from the user; instructs reading credentials/secrets;
+   instructs sending data to an external URL
+<span class="bad">[no_embedded_secrets]</span> Anthropic-style API key
+<span class="bad">[bundled_scripts_safe]</span> scripts/beacon.py: undeclared network call;
+   reads a credential/system file; reads a third-party secret from env
+
+<span class="bad">VERDICT: FAIL</span> — bounced at the door <span class="dim">(exit 1; nothing runs)</span></pre>
+    </div>
+
+    <h3>The Eval 0 code</h3>
+    <p>Each finding above comes from a small, transparent pattern set — no black box. This is the
+      whole detection surface (from <code class="inl">gates/eval0_structural.py</code>):</p>
+    <details class="code" open><summary>gates/eval0_structural.py — the security signatures</summary>
+<pre><span class="code-cmt"># prompt-injection / instruction-override aimed at the agent</span>
+INJECTION_PATTERNS = [
+  (r"ignore\s+(all\s+)?(previous|prior|above)\s+instructions", "instruction-override"),
+  (r"do\s+not\s+(tell|inform)\s+the\s+user",                   "hide actions from the user"),
+  (r"\bexfiltrat",                                              "exfiltration language"),
+  (r"(read|cat|open)\b.*(credential|\.aws|\.ssh|id_rsa|/etc/passwd)", "reads secrets"),
+  (r"\b(AWS_SECRET_ACCESS_KEY|ANTHROPIC_API_KEY|GITHUB_TOKEN)\b", "3rd-party credential"),
+  (r"(send|post|upload|beacon).*(https?://)",                  "sends data to external URL"),
+]
+<span class="code-cmt"># embedded secrets</span>
+SECRET_PATTERNS = [ (r"sk-ant-[A-Za-z0-9\-]{20,}", "Anthropic key"),
+                    (r"AKIA[0-9A-Z]{16}", "AWS key"), (r"ghp_[A-Za-z0-9]{20,}", "GitHub PAT"), … ]
+<span class="code-cmt"># bundled scripts: network calls not declared in the description, or cred reads</span>
+NET_PATTERNS  = [ (r"requests\.(get|post)|urllib\.request|socket\.socket", "network call"), … ]
+CRED_PATTERNS = [ (r"os\.environ\[.(AWS_SECRET_ACCESS_KEY|ANTHROPIC_API_KEY)", "reads a secret from env"), … ]
+
+<span class="code-cmt"># plus structural lint: frontmatter+name+description, referenced files exist,
+# no absolute paths, description length, non-empty body.  All checks must pass.</span>
+def evaluate_skill(skill_dir) -&gt; EvaluationResult:  <span class="code-cmt"># → label pass/fail, findings</span></pre>
+    </details>
+    <div class="editrow">
+      <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/gates/eval0_structural.py">Open eval0_structural.py on GitHub</a>
+    </div>
+    <p class="note">This static scan is a demo-grade pattern matcher — the point is <i>where</i> the
+      gate lives. In production, layer a dedicated scanner / guardrail model in this same slot.</p>
+  </section>
+
+  <section id="ci">
+    <div class="step-label">The CI gate</div>
+    <h2>How to do it — the reusable workflow</h2>
+    <p>The whole gate is one <code class="inl">workflow_call</code> file plus a thresholds file. Drop
+      them into any agent repo; secrets are org-level. On a PR it detects changed skills, runs the
+      gate, and blocks on any breach — with Arize as the system of record.</p>
+
+    <details class="code" open><summary>.github/workflows/skill-gate.yml — copy into any repo</summary>
+<pre>name: skill-gate
+on:
+  workflow_call:
+    inputs:
+      skill: { type: string, default: "" }   <span class="code-cmt"># empty = auto-detect changed skills</span>
+      mock:  { type: boolean, default: false }
+    secrets:
+      ARIZE_API_KEY:     { required: true }
+      ARIZE_SPACE_ID:    { required: true }
+      ANTHROPIC_API_KEY: { required: false } <span class="code-cmt"># absent → gate runs in --mock</span>
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -r requirements.txt   <span class="code-cmt"># incl. arize-ax-cli</span>
+      - name: AX CLI profile from secrets
+        run: ax profiles create gic-ci --api-key "$ARIZE_API_KEY" --auth-method api-key
+      - name: Run the skill gate
+        run: python ci/gate.py --skill "${{ matrix.skill }}"  <span class="code-cmt"># Arize = system of record</span></pre>
+    </details>
+
+    <details class="code"><summary>ci/thresholds.yaml — per-skill gate thresholds</summary>
+<pre>default:
+  eval0: all_checks_pass          <span class="code-cmt"># structural + security must fully pass</span>
+  trigger_fp_rate_max: 0.10       <span class="code-cmt"># hard-negatives that wrongly triggered</span>
+  trigger_fn_rate_max: 0.10
+  functional_pass_rate_min: 0.80  <span class="code-cmt"># Eval 2 pass@1 over task/edge cases</span>
+  max_tokens_per_case_p50: 30000
+skills:
+  api-helper: {}
+  story-writer: { functional_pass_rate_min: 0.80 }  <span class="code-cmt"># rubric judge, same bar</span></pre>
+    </details>
+    <div class="editrow">
+      <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/ci/skill-gate.yml">skill-gate.yml</a>
+      <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/ci/gate.py">gate.py</a>
+      <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/ci/thresholds.yaml">thresholds.yaml</a>
+      <a class="edit" target="_blank" rel="noopener" href="https://github.com/FSurani/arize-skills-ci-gate/blob/main/experiments/eval_hub.py">eval_hub.py</a>
+    </div>
+    <p class="note">Full source (harness, evaluators, <code class="inl">gate.py</code>, the 135-line
+      workflow with changed-skill detection + tracing-plugin install) lives in the demo repo
+      <code class="inl">FSurani/arize-skills-ci-gate</code>. Links above open each file on GitHub.</p>
+
+    <h3>Related: the same pattern, another example</h3>
+    <p>This gate is the skill-scoped instance of Arize's standard CI/CD experiment pattern —
+      <b>task → dataset from Arize → <code class="inl">experiments.run()</code> → threshold → exit 0/1 →
+      GitHub Actions status</b>. A colleague's grounding-with-search example follows the exact same
+      shape (an LLM-judge evaluator, a 0.7 mean-score threshold gating the build):</p>
+    <div class="linkrow">
+      <a class="axbtn ghost" target="_blank" rel="noopener" href="https://github.com/seanlee10/arize-cicd-experiment/blob/main/experiments/grounding_with_search.py">seanlee10/arize-cicd-experiment · grounding_with_search.py</a>
+    </div>
+    <p class="note">Ours differs only in what the "task" is (run a headless coding agent on a skill) and
+      that it carries a dual verifier/judge path — the Arize CI/CD scaffolding is identical.</p>
+  </section>
+
+  <section id="arize">
+    <div class="step-label">See it in Arize</div>
+    <h2>The gate's output, live</h2>
+    <p>Everything below is already recorded in Arize. Two datasets — one per skill — each holding the
+      experiments its version history needs.</p>
+
+    <h3>api-helper — two variants, one verdict</h3>
+    <p>The hub evaluators score each variant. The broad description (variant_a) trips the
+      hard-negatives; the tight one (variant_b) is clean and passes the gate.</p>
+    <div class="out">
+      <div class="out-label">hub scores — cc-api-helper (A/B arms)</div>
+<pre><span class="dim">metric                     variant_a    variant_b</span>
+trigger FP rate               <span class="bad">1.00</span>         <span class="ok">0.00</span>
+functional pass@1             <span class="bad">0.40</span>         <span class="ok">1.00</span>
+tokens p50                   26680         9791
+<span class="k">VERDICT</span>                       <span class="bad">FAIL</span>         <span class="ok">PASS</span></pre>
+    </div>
+    <div class="linkrow">
+      <a class="axbtn" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/datasets/RGF0YXNldDozNTcyMjM6bWE4Sw==?selectedTab=experiments">Open api-helper experiments</a>
+    </div>
+
+    <h3>Why the skill exists — trace, without vs with</h3>
+    <p>Same task, same prompt (fetch order <code class="inl">ord_0001</code>). Open each trace and look
+      for the <b><code class="inl">Skill</code> tool-use span</b> — that's the skill loading. It's the
+      whole difference:</p>
+    <div class="look">
+      <div class="t fail">
+        <div class="status">✗ baseline · no skill</div>
+        <h4>skill_off — gives up</h4>
+        <p>1 turn, <b>no <code>Skill</code> span</b>, no API calls. Output: <i>"I don't have access to
+          the internal Orders service…"</i> — it doesn't know the service exists.</p>
+        <a class="axbtn ghost" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/projects/TW9kZWw6ODk3NTgzMTgxODpValVu?selectedSessionId=5925bd01-d097-487c-8022-140d0dbc7eed&amp;selectedTab=llmTracing&amp;timeZoneA=America%2FLos_Angeles&amp;startA=1785024000000&amp;endA=1785369600000&amp;envA=tracing&amp;modelType=generative_llm">Open failing trace</a>
+      </div>
+      <div class="t pass">
+        <div class="status">✓ with skill · variant_b</div>
+        <h4>variant_b — succeeds</h4>
+        <p>6 turns, opens with a <b><code>Skill</code> span</b> (loads api-helper), then Bash calls the
+          Orders API with <code>X-Org-Token</code> and writes <code>customer.txt</code>. Correct answer.</p>
+        <a class="axbtn ghost" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/projects/TW9kZWw6ODk3NTgzMTgxODpValVu?selectedSessionId=fa2b0c54-c4ff-433d-8b37-2fa9e04529fb&amp;selectedTab=llmTracing&amp;timeZoneA=America%2FLos_Angeles&amp;startA=1785024000000&amp;endA=1785369600000&amp;envA=tracing&amp;modelType=generative_llm">Open passing trace</a>
+      </div>
+    </div>
+
+    <h3>story-writer — judging the unverifiable</h3>
+    <p>No gold answer, so the <code class="inl">cc-eval2-rubric</code> evaluator (an LLM judge, run
+      server-side in Arize) scores each story <code class="inl">good</code>/<code class="inl">bad</code>
+      against the INVEST rubric, <b>with a written explanation</b>. Same result shape as the code
+      verifier, so the gate treats both identically.</p>
+    <div class="linkrow">
+      <a class="axbtn" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjoyMDExNTowekFk/spaces/U3BhY2U6NDU1NzI6c01CQQ==/datasets/RGF0YXNldDozNTcwNjk6c3U1OQ==?selectedTab=experiments">Open story-writer experiment</a>
+    </div>
+    <p class="note">The A/B pass-rate deltas above use an engineered/illustrative arm so the tuning
+      effect is reproducible; the traces and the story-writer scores are real Claude Code runs.</p>
+  </section>
+
+  <section id="arch">
+    <div class="step-label">Architecture &amp; roadmap</div>
+    <h2>Beyond the CI gate</h2>
+    <div class="mini-grid">
+      <div class="mini"><div class="k">Reusable CI</div><h4>One workflow, org-wide</h4><p>Single <code class="inl">skill-gate.yml</code>; AX CLI manages datasets / experiments / evaluators; experiments append-only, never deleted. Thresholds per-skill.</p></div>
+      <div class="mini"><div class="k">Security</div><h4>Static now, runtime next</h4><p>Static injection scan as a CI hard gate today; layer a dedicated scanner and <b>Arize Guardrails / online-evals</b> for live traffic.</p></div>
+      <div class="mini"><div class="k">Tracing</div><h4>Default-on at the utils layer</h4><p>The Coding-Harness-Tracing plugin via <code class="inl">settings.json</code> → every agent from your agent platforms is traced automatically, no per-agent code.</p></div>
+      <div class="mini"><div class="k">Data masking</div><h4>Flags now, redaction hook next</h4><p>Coarse <code class="inl">ARIZE_LOG_*</code> flags today; for field-level PII/secret masking, an OTel span-processor in the platform utils library — centralized, default-on.</p></div>
+    </div>
+  </section>
+
+  <footer>Arize AX · reference implementation for gating agent skills in CI · repo: arize-skills-ci-gate</footer>
+</div>

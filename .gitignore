@@ -1,0 +1,30 @@
+# secrets / env
+.env
+.env.local
+*.pem
+# Claude Code local + sandboxed-run settings — may contain live API keys
+settings.local.json
+runs_real/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# run artifacts
+runs/
+.sandboxes/
+*.log
+report/out/
+
+# os
+.DS_Store
+
+# internal SA engagement docs — kept locally, not part of the public demo repo
+HANDOFF.md
+plan.md
+context.md
+DEMO_WALKTHROUGH.md
