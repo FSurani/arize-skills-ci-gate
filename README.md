@@ -98,7 +98,7 @@ claude plugin install claude-code-tracing@coding-harness-tracing
 ```bash
 # Gate a skill: eval0 → harness → Arize experiment → hub scores → verdict → exit code
 python ci/gate.py --skill api-helper --mock
-python ci/gate.py --skill api-helper --arm variant_a --mock   # the worse variant → FAIL
+python ci/gate.py --skill api-helper --variant variant_a --mock   # the worse variant → FAIL
 python ci/gate.py --skill story-writer --mock
 
 # Tests
@@ -106,7 +106,7 @@ python -m pytest tests/ -q
 ```
 
 Everything works with `--mock` (no keys/tokens). Drop `--mock` once keys + Claude Code are
-installed for real runs. Flags: `--skill`, `--arm`, `--mock`, `--max-cases N`, `--dry-run`.
+installed for real runs. Flags: `--skill`, `--variant`, `--mock`, `--max-cases N`, `--dry-run`.
 
 ## The reusable workflow
 

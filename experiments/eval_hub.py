@@ -15,7 +15,7 @@ LLM template) + list it in SKILL_EVALS + map its columns in MAPPINGS.
 Public API used by setup.py (provisioning) and ci/gate.py (per-run):
   ensure_evaluators()                  -> {logical: evaluator_id}   (create in Arize, idempotent)
   ensure_dataset(skill)                -> (name, dataset_id)        (one stable cc-<skill> dataset)
-  run_experiment(skill, arm, runs)     -> (dataset_id, experiment_id)  (push + score server-side)
+  run_experiment(skill, variant, runs) -> (dataset_id, experiment_id)  (push + score server-side)
   read_metrics(skill, ds_id, exp_id)   -> {fp_rate, fn_rate, functional_pass_rate, tokens_p50}
 
 (Eval 0 — the structural + security scan — runs first, locally, in ci/gate.py.)
@@ -267,7 +267,7 @@ def ensure_dataset(skill, name=None):
 
 
 # ── per-run: build rows, create experiment, score, read metrics (gate.py) ────
-def build_rows(skill, arm, runs, cases_by_id):
+def build_rows(skill, variant, runs, cases_by_id):
     """Experiment rows from harness runs. Every row carries the SAME columns
     (Arize rejects a ragged/null schema), so negatives get empty defaults."""
     rows = []
@@ -275,7 +275,7 @@ def build_rows(skill, arm, runs, cases_by_id):
         c = cases_by_id.get(r.case_id, {})
         row = {
             "example_id": None,  # filled after dataset export
-            "case_id": r.case_id, "arm": arm,
+            "case_id": r.case_id, "variant": variant,
             "output": r.final_output or "",
             "triggered": bool(detect_triggered(r.tool_spans, skill)),
             "should_trigger": bool(c.get("should_trigger")),
@@ -297,7 +297,7 @@ def build_rows(skill, arm, runs, cases_by_id):
     return rows
 
 
-def _score_experiment(skill, arm, ds_id, exp_id, ev_ids, ts):
+def _score_experiment(skill, variant, ds_id, exp_id, ev_ids, ts):
     """Create + trigger one Arize eval task per applicable evaluator; wait for each."""
     for logical in SKILL_EVALS[skill]:
         spec = EVALUATORS[logical]
@@ -306,11 +306,11 @@ def _score_experiment(skill, arm, ds_id, exp_id, ev_ids, ts):
         qf = QUERY_FILTER.get(logical)
         t = None
         if qf:  # positives-only where applicable
-            t = axj("tasks", "create-evaluation", "-n", f"cc-{skill}-{arm}-{logical}-{ts}", "--task-type", ttype,
+            t = axj("tasks", "create-evaluation", "-n", f"cc-{skill}-{variant}-{logical}-{ts}", "--task-type", ttype,
                     "--dataset", ds_id, "-s", SPACE, "--experiment-ids", exp_id,
                     "--evaluators", json.dumps([{**ev_cfg, "query_filter": qf}]), "-o", "json")
         if not t:
-            t = axj("tasks", "create-evaluation", "-n", f"cc-{skill}-{arm}-{logical}-{ts}-nf", "--task-type", ttype,
+            t = axj("tasks", "create-evaluation", "-n", f"cc-{skill}-{variant}-{logical}-{ts}-nf", "--task-type", ttype,
                     "--dataset", ds_id, "-s", SPACE, "--experiment-ids", exp_id,
                     "--evaluators", json.dumps([ev_cfg]), "-o", "json")
         if not t:
@@ -320,7 +320,7 @@ def _score_experiment(skill, arm, ds_id, exp_id, ev_ids, ts):
         print(f"[score] {spec['name']}: {poll_run(t['id'])}")
 
 
-def run_experiment(skill, arm, runs, ev_ids=None):
+def run_experiment(skill, variant, runs, ev_ids=None):
     """Push harness runs as an Arize experiment against the stable dataset, then
     let the Eval Hub evaluators score it server-side. Returns (dataset_id, experiment_id)."""
     cases = load_cases(DATASETS / f"{skill.replace('-', '_')}_cases.jsonl")
@@ -330,16 +330,16 @@ def run_experiment(skill, arm, runs, ev_ids=None):
     cid_to_exid = {(row.get("additional_properties") or {}).get("case_id"): row["id"] for row in ex}
     ev_ids = ev_ids or ensure_evaluators()
 
-    rows = build_rows(skill, arm, runs, cases_by_id)
+    rows = build_rows(skill, variant, runs, cases_by_id)
     for row in rows:
         row["example_id"] = cid_to_exid.get(row["case_id"], row["case_id"])
     ts = int(time.time())
-    exp = axj("experiments", "create", "-n", f"cc-{skill}-{arm}-{ts}", "--dataset", ds_id,
+    exp = axj("experiments", "create", "-n", f"cc-{skill}-{variant}-{ts}", "--dataset", ds_id,
               "-s", SPACE, "-f", tmpfile(rows), "-o", "json")
     if not exp or not exp.get("id"):
-        raise RuntimeError(f"experiment create failed for {skill}/{arm}")
-    print(f"[experiment] cc-{skill}-{arm}-{ts} -> {exp['id']} ({len(rows)} runs)")
-    _score_experiment(skill, arm, ds_id, exp["id"], ev_ids, ts)
+        raise RuntimeError(f"experiment create failed for {skill}/{variant}")
+    print(f"[experiment] cc-{skill}-{variant}-{ts} -> {exp['id']} ({len(rows)} runs)")
+    _score_experiment(skill, variant, ds_id, exp["id"], ev_ids, ts)
     return ds_id, exp["id"]
 
 
